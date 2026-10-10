@@ -63,7 +63,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .plan-chip:active{transform:scale(.95)}
 .plan-chip.small{font-size:12.5px;padding:6px 12px}
 .plan-chip.xsmall{font-size:12px;padding:5px 10px}
-.plan-subrow{display:flex;align-items:center;justify-content:space-between;margin:0 0 7px}
+.plan-subrow{display:flex;align-items:center;justify-content:flex-end;margin:0 0 7px}
 .plan-subrow .plan-sub{margin:0}
 .plan-etoggle{border:none;background:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:2px 4px}
 .plan-etoggle.on{color:var(--sub)}
@@ -477,7 +477,7 @@ function progressHtml(plans){
 }
 function chipsHtml(){
   const a = chips();
-  return '<div class="plan-subrow"><span class="plan-sub">快捷添加</span>'
+  return '<div class="plan-subrow">'
    + '<button class="plan-etoggle'+(planEditMode?' on':'')+'" data-act="editchips">'+(planEditMode?'完成':'编辑')+'</button></div>'
    + '<div class="plan-chips">'
    + a.map(function(x){
@@ -512,7 +512,7 @@ function planBlockHtml(plans, noClass){
    + chipsHtml()
    + (mine.length
        ? '<div class="plan-list">'+mine.map(planItemHtml).join("")+'</div>'
-       : (noClass ? '<div class="empty" style="font-size:13px;margin-bottom:10px">还没有计划，点上面的快捷项加一条。</div>' : ""));
+       : "");
 }
 function renderToday(){
   const {week, weekday} = currentWeekWeekday();
