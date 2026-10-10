@@ -81,7 +81,7 @@ html.dark .btn.ghost{background:#2c2a27;border-color:var(--line)}
 /* ===== 每日一句 ===== */
 .quote-card{text-align:center;padding:36px 24px 28px;background:linear-gradient(180deg,#fcfbf7 0%,#fdfdfb 100%)}
 .q-label{font-size:12.5px;color:var(--sub);letter-spacing:.5px;margin-bottom:16px}
-.q-text{font-family:Georgia,"Palatino Linotype","Book Antiqua",Palatino,"Times New Roman",serif;font-size:56px;font-weight:600;line-height:1.2;letter-spacing:.4px;color:var(--ink);text-wrap:balance;max-width:900px;margin:0 auto}
+.q-text{font-family:Georgia,"Palatino Linotype","Book Antiqua",Palatino,"Times New Roman",serif;font-size:62px;font-weight:600;line-height:1.2;letter-spacing:.4px;color:var(--ink);text-wrap:balance;max-width:900px;margin:0 auto}
 .q-src{font-size:14px;color:var(--accent);margin-top:14px}
 /* ===== 行情速览（Apple 审美） ===== */
 .mkt-meta{font-size:13px;color:var(--sub);margin-bottom:6px}
@@ -135,7 +135,7 @@ html.dark .modal-mask{background:rgba(0,0,0,.62)}
 @media(max-width:640px){
   .mkt-row{gap:8px 10px;padding:10px 12px}
   .mkt-chart{width:108px;height:36px}
-  .q-text{font-size:50px}
+  .q-text{font-size:55px}
   .quote-card{padding:28px 16px 24px}
 }
 /* ===== 暗色模式（22:00 - 07:00 自动启用，html.dark） ===== */
@@ -1329,7 +1329,7 @@ function fetchNews(){
   fetchHotNews();
 }
 function fetchSinaNews(){
-  const cbName = "__sinaNews" + Date.now();
+  const cbName = "sinaNews" + Date.now();
   const cleanup = ()=>{ try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; } };
   window[cbName] = (j)=>{
     try{
@@ -1366,7 +1366,7 @@ function fetchHotNews(){
   const results = [];
   chs.forEach(pair=>{
     const catKey = pair[0], lid = pair[1], tagName = pair[2];
-    const cbName = "__sinaRoll" + lid + Date.now();
+    const cbName = "sinaRoll" + lid + Date.now();
     const done = ()=>{
       if(--pending === 0){
         const seen = {}; const hot = [];
