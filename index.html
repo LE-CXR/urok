@@ -1,0 +1,1480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>урок · 2026-2027第一学期</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='5' width='18' height='16' rx='3' fill='%232f6fed'/%3E%3Crect x='3' y='9' width='18' height='3' fill='%231b4fd8'/%3E%3Crect x='7' y='2' width='2' height='5' fill='%232f6fed'/%3E%3Crect x='15' y='2' width='2' height='5' fill='%232f6fed'/%3E%3Crect x='7' y='13' width='4' height='2' fill='white'/%3E%3Crect x='13' y='13' width='4' height='2' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#f5f4ef; --card:#fdfdfb; --ink:#1f1e1d; --sub:#7d7a72; --line:#e6e4dd;
+  --brand:#2f6fed; --brand-dark:#1b4fd8;
+  --accent:#c15f3c; --accent-deep:#a84a2b;
+  --russ:#2f6fed; --comm:#0ea5a0; --vocal:#d97706; --moral:#b3452f;
+  --policy:#b3452f; --chess:#3f7a4e; --stock:#274b8f; --psych:#7c5cbf; --other:#5b6b8c;
+  --up:#d92c30; --down:#0f9d5c;
+  --card2:#fbfaf6; --badge:#eef0f8; --today:#eef4ff; --todayb:#bcd2ff;
+  --dash:#b8b4ab; --axis:#a9a69d;
+}
+html.dark{
+  --bg:#1a1917; --card:#262522; --ink:#eceae6; --sub:#a19d97; --line:#383632;
+  --brand:#7c9bff; --brand-dark:#a5b8ff;
+  --accent:#da7756; --accent-deep:#c05f3f;
+  --russ:#5c8bff; --comm:#21c6c0; --vocal:#f0a13c; --moral:#cf6a4f;
+  --policy:#cf6a4f; --chess:#56a471; --stock:#4a7ac2; --psych:#9d7fd8; --other:#7f8aa6;
+  --up:#ff5a62; --down:#21d68e;
+  --card2:#1f1e1c; --badge:#322f2c; --today:#2c2723; --todayb:#4a382c;
+  --dash:#5b5b63; --axis:#6e6e76;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;padding:20px 14px 48px}
+.wrap{max-width:1060px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 22px;margin-top:16px;box-shadow:0 1px 2px rgba(31,30,29,.03),0 16px 40px -20px rgba(31,30,29,.16)}
+.card h2{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";width:4px;height:16px;border-radius:2px;background:var(--accent);flex:none}
+.card h2 svg{flex:none}
+/* 今日 */
+.today-meta{display:inline-block;font-size:14px;font-weight:700;color:#fff;background:var(--accent);border-radius:20px;padding:4px 14px;margin-bottom:14px}
+.today-list{display:flex;flex-direction:column;gap:14px}
+.t-item{display:flex;gap:16px;align-items:stretch;border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--card2)}
+.t-time{flex:none;min-width:112px;text-align:left}
+.t-time .range{font-weight:800;font-size:19px;color:var(--accent);letter-spacing:.3px}
+.t-time .slot{font-size:13.5px;color:var(--sub);margin-top:2px}
+.t-body{flex:1;min-width:0}
+.t-loc{font-weight:700;font-size:19px;line-height:1.3}
+.t-name{font-weight:600;font-size:15.5px;color:var(--ink);margin-top:2px}
+.t-line{font-size:13.5px;color:var(--sub);margin-top:2px}
+.t-flag{flex:none;align-self:center;width:8px;height:44px;border-radius:4px}
+.empty{color:var(--sub);font-size:14px;padding:8px 0}
+/* 周视图 */
+.week-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.week-toolbar label{font-size:14px;color:var(--sub)}
+.week-toolbar select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:var(--card);color:var(--ink)}
+.week-toolbar .badge{font-size:13px;color:var(--brand-dark);background:var(--badge);border-radius:20px;padding:3px 10px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.week-grid{display:grid;grid-template-columns:repeat(7,minmax(128px,1fr));gap:8px;min-width:900px}
+.wday{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px;min-height:120px}
+.wday.today{background:var(--today);border-color:var(--accent)}
+.wday-head{font-size:13px;font-weight:700;color:var(--sub);margin-bottom:6px;display:flex;justify-content:space-between}
+.wday.today .wday-head{color:var(--accent)}
+.witem{border-radius:8px;padding:6px 8px;margin-bottom:6px;font-size:13px;color:#fff;line-height:1.35}
+.witem .n{font-weight:600}
+.witem .d{opacity:.9;font-size:12px;margin-top:2px}
+/* 按钮 */
+.btns{display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:10px;padding:11px 18px;font-size:15px;font-weight:600;cursor:pointer;background:var(--brand);color:#fff;transition:background .15s}
+.btn:hover{background:var(--brand-dark)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.ghost:hover{background:#f2f4f8}
+.btn.mini{font-size:13px;padding:6px 12px;margin-left:auto}
+html.dark .btn.ghost{background:#2c2a27;border-color:var(--line)}
+.btn svg{flex:none}
+.hint{font-size:13.5px;color:var(--sub);margin-top:10px}
+/* toast */
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#1f2937;color:#fff;font-size:14px;padding:10px 18px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:120}
+#toast.show{opacity:1}
+@media(max-width:640px){
+  .card{padding:15px}
+  .t-time{min-width:96px}
+  .t-loc{font-size:18px}
+}
+/* ===== 每日一句 ===== */
+.quote-card{text-align:center;padding:36px 24px 28px;background:linear-gradient(180deg,#fcfbf7 0%,#fdfdfb 100%)}
+.q-label{font-size:12.5px;color:var(--sub);letter-spacing:.5px;margin-bottom:16px}
+.q-text{font-family:Georgia,"Palatino Linotype","Book Antiqua",Palatino,"Times New Roman",serif;font-size:56px;font-weight:600;line-height:1.2;letter-spacing:.4px;color:var(--ink);text-wrap:balance;max-width:900px;margin:0 auto}
+.q-src{font-size:14px;color:var(--accent);margin-top:14px}
+/* ===== 行情速览（Apple 审美） ===== */
+.mkt-meta{font-size:13px;color:var(--sub);margin-bottom:6px}
+.mkt-sec{font-size:14px;font-weight:700;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
+.mkt-sec::before{content:"";width:3px;height:13px;border-radius:2px;background:var(--accent);flex:none}
+.mkt-sec:first-child{margin-top:8px}
+.mkt-count{font-size:12px;font-weight:600;color:var(--sub);background:var(--badge);border-radius:20px;padding:1px 8px}
+.mkt-count.up{color:var(--up);background:#fdeaea}
+.mkt-count.down{color:var(--down);background:#e4f6ee}
+.mkt-list{display:flex;flex-direction:column;gap:8px}
+.mkt-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:var(--card2);cursor:pointer}
+.mkt-row:active{transform:scale(.99)}
+.mkt-info{flex:1;min-width:0}
+.mkt-name{font-size:15.5px;font-weight:700}
+.mkt-code{font-size:12px;color:var(--sub);font-weight:400;margin-left:4px}
+.mkt-price{font-size:16px;font-weight:700;margin-top:1px;font-variant-numeric:tabular-nums}
+.mkt-chg{font-size:13px;font-weight:600}
+.mkt-tag{font-size:12px;color:var(--sub);margin-top:2px}
+.mkt-chart{flex:none;width:132px;height:40px}
+.mkt-chart svg{display:block;filter:drop-shadow(0 1px 3px rgba(20,30,60,.14))}
+.mkt-note{flex:0 0 100%;font-size:12px;color:var(--sub);margin-top:-2px}
+/* 上涨/下跌：大板块同款行卡片，每屏 4 条，左右滑动翻下一组 */
+.mkt-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;margin:0 -4px;padding:2px 4px 6px}
+.mkt-track{display:flex;gap:8px;width:max-content}
+.mkt-group{flex:none;width:400px;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px}
+.mkt-logic{margin-top:14px;font-size:13.5px;color:var(--sub);line-height:1.7;border-top:1px dashed var(--line);padding-top:10px}
+.mkt-logic b{color:var(--ink)}
+/* 详情弹层 */
+.modal-mask{position:fixed;inset:0;background:rgba(20,19,17,.45);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
+.modal-mask[hidden]{display:none}
+html.dark .modal-mask{background:rgba(0,0,0,.62)}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{background:var(--card);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;width:100%;max-width:600px;max-height:85vh;overflow:auto;padding:4px 22px 22px;box-shadow:0 -20px 60px -20px rgba(0,0,0,.35);animation:slideup .26s cubic-bezier(.2,.9,.3,1.05)}
+.dl-head{display:flex;align-items:flex-start;gap:10px}
+.dl-title{font-size:22px;font-weight:800}
+.dl-sub{font-size:13.5px;color:var(--sub);margin-top:1px}
+.dl-close{margin-left:auto;border:none;background:var(--badge);width:32px;height:32px;border-radius:50%;font-size:18px;color:var(--sub);cursor:pointer;flex:none}
+.dl-price{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:14px}
+.dl-chg{font-size:15px;font-weight:700;margin-top:2px}
+.dl-tabs{display:flex;gap:4px;margin:18px 0 4px;border-bottom:1px solid var(--line);padding-bottom:8px;overflow-x:auto}
+.dl-tabs button{border:none;background:none;font-size:14px;color:var(--sub);padding:4px 11px;border-radius:8px;cursor:pointer;font-weight:600;flex:none}
+.dl-tabs button.on{color:#fff;background:var(--accent)}
+.dl-chart{width:100%;height:236px;display:flex;align-items:center;justify-content:center}
+.dl-chart svg{width:100%;height:100%}
+.dl-chart .dl-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.dl-loading{font-size:13.5px;color:var(--sub)}
+.dl-stats{display:grid;grid-template-columns:1fr 1fr;margin-top:14px;border-top:1px solid var(--line);padding-top:10px;font-size:13.5px}
+.dl-stats .kv{display:flex;justify-content:space-between;padding:5px 2px;border-bottom:1px dashed var(--line)}
+.dl-stats .k{color:var(--sub)}
+.dl-stats .v{font-weight:700;font-variant-numeric:tabular-nums}
+@media(max-width:640px){
+  .mkt-row{gap:8px 10px;padding:10px 12px}
+  .mkt-chart{width:108px;height:36px}
+  .q-text{font-size:50px}
+  .quote-card{padding:28px 16px 24px}
+}
+/* ===== 暗色模式（22:00 - 07:00 自动启用，html.dark） ===== */
+/* 新浪美股图主题化美化：折线主区裁剪 + 底部渐变淡出（Apple 阴影感）+ 暗色反色适配 */
+.spark-img{
+  object-fit:cover;
+  object-position:50% 16%;
+  border-radius:8px;
+  filter:saturate(1.35) contrast(1.12);
+  -webkit-mask-image:linear-gradient(180deg,#000 60%,rgba(0,0,0,.3) 86%,transparent 100%);
+  mask-image:linear-gradient(180deg,#000 60%,rgba(0,0,0,.3) 86%,transparent 100%);
+}
+html.dark .spark-img{
+  filter:invert(.92) hue-rotate(180deg) saturate(.8) brightness(.98) contrast(1.15);
+}
+.dl-img img{
+  border-radius:14px;
+  filter:saturate(1.15) contrast(1.08);
+}
+.dl-fb{font-size:11px;color:var(--sub);text-align:center;margin-top:6px}
+html.dark .dl-img img{
+  filter:invert(.9) hue-rotate(180deg) saturate(.72) brightness(.96) contrast(1.18);
+}
+html.dark .quote-card{background:linear-gradient(180deg,#1e1d1b 0%,#262522 100%)}
+html.dark .mkt-count.up{color:#ff8a90;background:#3a2024}
+html.dark .mkt-count.down{color:#3fe09a;background:#1c3329}
+html.dark .mkt-chart svg{filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+html.dark .witem{filter:brightness(1.14)}
+html.dark #toast{background:#2e2c29}
+/* ===== 今日新闻速递 ===== */
+.news-meta{display:none}
+.sheet-sub{display:none}
+.news-item{display:flex;gap:10px;align-items:flex-start;padding:11px 2px;border-bottom:1px dashed var(--line);cursor:pointer}
+.news-item:last-child{border-bottom:none}
+.news-item:active{opacity:.72}
+.news-tag{flex:none;font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:7px;padding:2px 8px;margin-top:2px;white-space:nowrap}
+.news-txt{flex:1;min-width:0}
+.news-t{font-size:13.5px;font-weight:600;line-height:1.45}
+.news-m{font-size:12px;color:var(--sub);margin-top:4px;display:flex;gap:10px}
+.news-more{margin-top:10px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:14px;font-weight:700;color:var(--accent);padding:10px 0 2px;cursor:pointer;border-top:1px dashed var(--line)}
+.news-arrow{font-size:16px;line-height:1}
+/* 底部弹层 */
+.sheet-mask{position:fixed;inset:0;background:rgba(20,19,17,.45);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
+.sheet-mask[hidden]{display:none}
+body.lock-scroll{overflow:hidden}
+html.dark .sheet-mask{background:rgba(0,0,0,.62)}
+.news-sheet{width:100%;max-width:600px;background:var(--card);border:1px solid var(--line);border-bottom:none;border-radius:22px 22px 0 0;max-height:85vh;display:flex;flex-direction:column;animation:slideup .26s cubic-bezier(.2,.9,.3,1.05);box-shadow:0 -20px 60px -20px rgba(0,0,0,.35)}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:none}}
+.sheet-bar{width:40px;height:4px;border-radius:2px;background:var(--line);margin:10px auto 2px;flex:none}
+.sheet-head{display:flex;align-items:center;padding:8px 20px 0}
+.sheet-title{font-size:18px;font-weight:800}
+.sheet-close{margin-left:auto;border:none;background:var(--badge);width:30px;height:30px;border-radius:50%;font-size:15px;color:var(--sub);cursor:pointer;flex:none}
+.sheet-sub{padding:5px 20px 10px;font-size:12.5px;color:var(--sub)}
+.sheet-list{flex:1;min-height:0;overflow-y:auto;padding:2px 20px 24px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+/* 文章内嵌阅读视图 */
+.news-reader{flex:1;display:flex;flex-direction:column;min-height:0}
+.news-reader[hidden]{display:none}
+.reader-head{display:flex;align-items:center;gap:10px;padding:6px 20px 10px;border-bottom:1px solid var(--line)}
+.reader-back{border:none;background:var(--badge);width:32px;height:32px;border-radius:50%;font-size:18px;color:var(--sub);cursor:pointer;flex:none;line-height:1}
+.reader-title{flex:1;min-width:0;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reader-open{flex:none;font-size:12.5px;color:var(--accent);font-weight:700;text-decoration:none}
+.reader-frame{flex:1;width:100%;border:none;background:#fff;min-height:0}
+html.dark .reader-frame{background:#1a1917}
+.reader-text{flex:1;overflow-y:auto;padding:18px 20px 28px;font-size:14px;line-height:1.85;color:var(--ink);-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
+.reader-text .rt-full{white-space:pre-wrap;word-break:break-word}
+/* 桌面端：右侧黄金分割抽屉（61.8/38.2） */
+@media(min-width:900px){
+  .sheet-bar{display:none}
+  .modal-mask{align-items:stretch;justify-content:flex-end}
+  .modal{width:38.2vw;max-width:none;max-height:100vh;height:100vh;border-radius:22px 0 0 22px;border:1px solid var(--line);border-right:none;animation:slideright .3s cubic-bezier(.2,.9,.3,1.05);box-shadow:-24px 0 60px -20px rgba(0,0,0,.3)}
+  .sheet-mask{align-items:stretch;justify-content:flex-end}
+  .news-sheet{width:38.2vw;max-width:none;max-height:100vh;height:100vh;border-radius:22px 0 0 22px;border:1px solid var(--line);border-right:none;animation:slideright .3s cubic-bezier(.2,.9,.3,1.05);box-shadow:-24px 0 60px -20px rgba(0,0,0,.3)}
+}
+@keyframes slideright{from{transform:translateX(100%)}to{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<!-- ===== 每日一句 ===== -->
+<section class="card quote-card">
+  <div class="q-label" id="qLabel"></div>
+  <div class="q-text" id="qText"></div>
+  <div class="q-src" id="qSrc"></div>
+</section>
+
+<!-- ===== 今日课程 ===== -->
+<section class="card" id="todayCard">
+  <h2>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    今日课程
+  </h2>
+  <div class="today-meta" id="todayMeta"></div>
+  <div class="today-list" id="todayList"></div>
+</section>
+
+<!-- ===== 今日新闻速递 ===== -->
+<section class="card" id="newsCard">
+  <h2>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 5h13v14H4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9h5M8 12h5M8 15h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M19 8l2 1v6l-2 1z" fill="currentColor" opacity=".55"/></svg>
+    今日新闻速递
+    <button class="btn ghost mini" id="refreshNews">刷新</button>
+  </h2>
+  <div class="news-meta" id="newsMeta">正在获取今日要闻…</div>
+  <div id="newsPreview"><div class="empty">加载中</div></div>
+  <div class="news-more" id="newsMore">查看全部<span class="news-arrow">›</span></div>
+</section>
+
+<!-- ===== 行情速览 ===== -->
+<section class="card">
+  <h2>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l5-5 4 3 6-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 8h3v3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    行情速览
+    <button class="btn ghost mini" id="refreshMkt">刷新</button>
+  </h2>
+  <div class="mkt-meta" id="mktMeta"></div>
+  <div id="mktBox"><div class="empty">正在获取最新行情…</div></div>
+</section>
+
+<!-- ===== 周视图 ===== -->
+<section class="card">
+  <h2>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M7 15h4M7 18h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    每周课表
+  </h2>
+  <div class="week-toolbar">
+    <label for="weekSel">查看第</label>
+    <select id="weekSel"></select>
+    <label>周</label>
+    <span class="badge" id="curBadge"></span>
+  </div>
+  <div class="scroll">
+    <div class="week-grid" id="weekGrid"></div>
+  </div>
+</section>
+</div>
+
+<!-- ===== 新闻速递底部弹层 ===== -->
+<div class="sheet-mask" id="newsMask" hidden>
+  <div class="news-sheet">
+    <div class="sheet-bar"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">今日新闻速递</div>
+      <button class="sheet-close" id="newsClose">✕</button>
+    </div>
+    <div class="sheet-sub" id="sheetMeta"></div>
+    <div class="sheet-list" id="newsList"><div class="empty">加载中…</div></div>
+    <div class="news-reader" id="newsReader" hidden>
+      <div class="reader-head">
+        <button class="reader-back" id="readerBack">‹</button>
+        <div class="reader-title" id="readerTitle"></div>
+        <a class="reader-open" id="readerOpen" href="#" target="_blank" rel="noopener">外部打开 ↗</a>
+      </div>
+      <iframe class="reader-frame" id="readerFrame" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+      <div class="reader-text" id="readerText" hidden></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 详情弹层 ===== -->
+<div class="modal-mask" id="detailMask" hidden>
+  <div class="modal">
+    <div class="sheet-bar"></div>
+    <div class="dl-head">
+      <div>
+        <div class="dl-title" id="dlTitle"></div>
+        <div class="dl-sub" id="dlSub"></div>
+      </div>
+      <button class="dl-close" id="dlClose">✕</button>
+    </div>
+    <div class="dl-price" id="dlPrice"></div>
+    <div class="dl-chg" id="dlChg"></div>
+    <div class="dl-tabs" id="dlTabs">
+      <button data-r="1d" class="on">1天</button>
+      <button data-r="5d">1周</button>
+      <button data-r="1mo">1月</button>
+      <button data-r="3mo">3月</button>
+      <button data-r="6mo">6月</button>
+      <button data-r="ytd">年初至今</button>
+    </div>
+    <div class="dl-chart" id="dlChart"><div class="dl-loading">加载中…</div></div>
+    <div class="dl-stats" id="dlStats"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* v20 改进：美股走势图统一为 SVG（腾讯 usfqkline 数据源）、失败态不卡加载、手动刷新、超时压缩、移除空频道 */
+/* =========================================================
+   课表数据（2026-2027 学年第一学期）
+   weeks: 逗号分隔的周段，如 "1-19"、"1-2,4-19"
+========================================================= */
+const DEFAULT_COURSES = [
+  {name:"外语（俄语）1", teacher:"袁玉华", weekday:1, start:"09:00", end:"10:30", loc:"1-305", weeks:"1-4,6-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:1, start:"10:45", end:"12:15", loc:"1-305", weeks:"1-4,6-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:1, start:"14:00", end:"15:30", loc:"1-307", weeks:"1-4,6-11"},
+  {name:"专业交流外语1", teacher:"PASEVICH ZARIANA", weekday:1, start:"14:00", end:"15:30", loc:"1-307", weeks:"12-19"},
+  {name:"国际象棋", teacher:"赵雪", weekday:1, start:"18:00", end:"19:30", loc:"图书馆302", weeks:"1-4,6-16"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:2, start:"09:00", end:"10:30", loc:"1-307", weeks:"1-4,6-19"},
+  {name:"声乐4（流行音乐）", teacher:"TARASENKO ARTEM", weekday:2, start:"10:45", end:"12:15", loc:"礼堂315（小舞台）", weeks:"3-4,6-18"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:2, start:"14:00", end:"17:15", loc:"1-305", weeks:"1-4,6-11"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:2, start:"14:00", end:"15:30", loc:"1-305", weeks:"12-19"},
+  {name:"专业交流外语1", teacher:"PASEVICH ZARIANA", weekday:2, start:"15:45", end:"17:15", loc:"1-305", weeks:"12-19"},
+  {name:"大学生心理健康教育", teacher:"邝佳慧/杨帆/孙新雅/毛雪莹", weekday:2, start:"18:00", end:"20:30", loc:"3-228", weeks:"1-4"},
+  {name:"外语（俄语）1", teacher:"袁玉华", weekday:3, start:"09:00", end:"10:30", loc:"1-305", weeks:"1-4,6-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:3, start:"10:45", end:"12:15", loc:"1-305", weeks:"1-4,6-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:3, start:"15:45", end:"19:30", loc:"1-307", weeks:"1-4,6-11"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:3, start:"15:45", end:"17:15", loc:"1-307", weeks:"12-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:3, start:"18:00", end:"19:30", loc:"1-307", weeks:"12-19"},
+  {name:"思想道德与法治", teacher:"莫婉娟", weekday:4, start:"08:00", end:"10:30", loc:"3-207", weeks:"1-3,5-18"},
+  {name:"外语（俄语）1", teacher:"袁玉华", weekday:4, start:"14:00", end:"15:30", loc:"1-305", weeks:"1-3,5-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:4, start:"15:45", end:"17:15", loc:"1-305", weeks:"1-3,5-11"},
+  {name:"专业交流外语1", teacher:"PASEVICH ZARIANA", weekday:4, start:"15:45", end:"17:15", loc:"1-305", weeks:"12-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:5, start:"09:00", end:"12:15", loc:"1-305", weeks:"1-2,5-19"},
+  {name:"外语（俄语）1", teacher:"PASEVICH ZARIANA", weekday:5, start:"14:00", end:"15:30", loc:"1-312", weeks:"1-2,5-11"},
+  {name:"专业交流外语1", teacher:"PASEVICH ZARIANA", weekday:5, start:"14:00", end:"15:30", loc:"1-312", weeks:"12-19"},
+  {name:"股票市场风险与分析", teacher:"叶子文", weekday:5, start:"15:45", end:"17:15", loc:"3-108", weeks:"1-2,5-18"},
+  {name:"形势与政策1、2", teacher:"袁晓江", weekday:6, start:"10:45", end:"12:15", loc:"3-228", weeks:"10-18"}
+];
+const COURSE_COLORS = {
+  "外语（俄语）1": "var(--russ)", "专业交流外语1": "var(--comm)",
+  "声乐4（流行音乐）": "var(--vocal)", "思想道德与法治": "var(--moral)",
+  "形势与政策1、2": "var(--policy)", "国际象棋": "var(--chess)",
+  "股票市场风险与分析": "var(--stock)", "大学生心理健康教育": "var(--psych)"
+};
+const colorOf = c => COURSE_COLORS[c.name] || "var(--other)";
+const WEEKDAYS = ["周一","周二","周三","周四","周五","周六","周日"];
+const ANCHOR = new Date(2026, 8, 7);
+const TOTAL_WEEKS = 19;
+let courses = JSON.parse(JSON.stringify(DEFAULT_COURSES));
+
+function pad(n){return n<10?"0"+n:""+n}
+function fmtDate(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+function fmtTime(ts){ const d = new Date(ts); return pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes()); }
+function parseWeekRanges(s){
+  const set = new Set();
+  s.split(",").forEach(seg=>{
+    const m = seg.trim().match(/^(\d+)(?:-(\d+))?$/);
+    if(!m) return;
+    const a = +m[1], b = m[2]?+m[2]:a;
+    for(let w=a; w<=b; w++) set.add(w);
+  });
+  return set;
+}
+function inWeek(c, w){ return parseWeekRanges(c.weeks).has(w) }
+function dateOfWeekday(week, weekday){ return new Date(ANCHOR.getTime() + ((week-1)*7 + (weekday-1)) * 86400000); }
+function currentWeekWeekday(){
+  const now = new Date();
+  const diff = Math.floor((now - ANCHOR)/86400000);
+  let w = Math.floor(diff/7)+1;
+  if(w<1) w=1; if(w>TOTAL_WEEKS) w=TOTAL_WEEKS;
+  const d = now.getDay();
+  return {week:w, weekday: d===0?7:d};
+}
+function renderToday(){
+  const {week, weekday} = currentWeekWeekday();
+  document.getElementById("todayMeta").textContent = "第 "+week+" 周";
+  const list = courses.filter(c=>c.weekday===weekday && inWeek(c, week)).sort((a,b)=>a.start.localeCompare(b.start));
+  const box = document.getElementById("todayList");
+  if(!list.length){ box.innerHTML = '<div class="empty">今天没有课，可以好好休息。</div>'; return; }
+  box.innerHTML = list.map(c=>`
+    <div class="t-item">
+      <span class="t-flag" style="background:${colorOf(c)}"></span>
+      <div class="t-time">
+        <div class="range">${c.start} - ${c.end}</div>
+        <div class="slot">${c.start} 开始</div>
+      </div>
+      <div class="t-body">
+        <div class="t-loc">${c.loc}</div>
+        <div class="t-name">${c.name}</div>
+        <div class="t-line">${c.teacher} · ${c.weeks}周</div>
+      </div>
+    </div>`).join("");
+}
+function renderWeekGrid(week){
+  const grid = document.getElementById("weekGrid");
+  const {week: curWeek, weekday: todayWd} = currentWeekWeekday();
+  const isCur = week === curWeek;
+  let html = "";
+  for(let wd=1; wd<=7; wd++){
+    const items = courses.filter(c=>c.weekday===wd && inWeek(c, week)).sort((a,b)=>a.start.localeCompare(b.start));
+    html += `<div class="wday${isCur && wd===todayWd ? ' today':''}">
+      <div class="wday-head"><span>${WEEKDAYS[wd-1]}</span><span>${fmtDate(dateOfWeekday(week,wd)).slice(5)}</span></div>
+      ${items.length? items.map(c=>`
+        <div class="witem" style="background:${colorOf(c)}">
+          <div class="n">${c.start}-${c.end}</div>
+          <div>${c.name}</div>
+          <div class="d">${c.loc}</div>
+        </div>`).join("") : '<div class="empty" style="font-size:12px">—</div>'}
+    </div>`;
+  }
+  grid.innerHTML = html;
+  // 仅本周：把"今天"一列滚到容器中间；其他周滚回周一
+  requestAnimationFrame(()=>{
+    const scroller = grid.parentElement;
+    if(!scroller) return;
+    if(isCur){
+      const tc = grid.querySelector(".wday.today");
+      if(tc){
+        const tcRect = tc.getBoundingClientRect();
+        const scRect = scroller.getBoundingClientRect();
+        const target = tcRect.left - scRect.left + scroller.scrollLeft - (scroller.clientWidth - tcRect.width) / 2;
+        scroller.scrollLeft = Math.max(0, target);
+      }
+    } else {
+      scroller.scrollLeft = 0;
+    }
+  });
+}
+function setupWeekSel(){
+  const sel = document.getElementById("weekSel");
+  sel.innerHTML = "";
+  for(let w=1; w<=TOTAL_WEEKS; w++) sel.add(new Option("第 "+w+" 周", w));
+  const {week} = currentWeekWeekday();
+  sel.value = week;
+  document.getElementById("curBadge").textContent = "当前第 "+week+" 周";
+  sel.onchange = ()=>renderWeekGrid(+sel.value);
+  renderWeekGrid(week);
+}
+
+/* =========================================================
+   每日一句：优先联网抓爱词霸每日一句（sid 每日递增不重复），
+   失败回退本地 60 条语录库（按日期轮换）
+========================================================= */
+const QUOTES = [
+  {en:"Stay hungry, stay foolish.", src:"Steve Jobs"},
+  {en:"The only way to do great work is to love what you do.", src:"Steve Jobs"},
+  {en:"It does not matter how slowly you go as long as you do not stop.", src:"Confucius"},
+  {en:"The future belongs to those who believe in the beauty of their dreams.", src:"Eleanor Roosevelt"},
+  {en:"Success is not final, failure is not fatal: it is the courage to continue that counts.", src:"Winston Churchill"},
+  {en:"Believe you can and you're halfway there.", src:"Theodore Roosevelt"},
+  {en:"Do or do not. There is no try.", src:"Yoda · Star Wars"},
+  {en:"Be yourself; everyone else is already taken.", src:"Oscar Wilde"},
+  {en:"Whether you think you can, or you think you can't—you're right.", src:"Henry Ford"},
+  {en:"The best time to plant a tree was 20 years ago. The second best time is now.", src:"Chinese Proverb"},
+  {en:"Discipline is the bridge between goals and accomplishment.", src:"Jim Rohn"},
+  {en:"You miss 100% of the shots you don't take.", src:"Wayne Gretzky"},
+  {en:"Hard work beats talent when talent doesn't work hard.", src:"Tim Notke"},
+  {en:"SHE'S NEVER YOURS, IT'S JUST YOUR TURN.", src:"邵艾伦 Alan · 薄肌教父"},
+  {en:"Go to the gym, every single day.", src:"薄肌理论 · 网络流行语"},
+  {en:"Your body is the only thing that is 100% yours.", src:"薄肌论 · 网络流行语"},
+  {en:"Trust the process.", src:"网络流行语"},
+  {en:"Small progress is still progress.", src:"网络流行语"},
+  {en:"Consistency beats intensity.", src:"健身圈流行语"},
+  {en:"You are your only limit.", src:"网络流行语"},
+  {en:"Stay disciplined, stay dangerous.", src:"健身圈流行语"},
+  {en:"No pain, no gain.", src:"健身谚语"},
+  {en:"One more rep.", src:"健身圈流行语"},
+  {en:"Imagination is more important than knowledge.", src:"Albert Einstein"},
+  {en:"Life is what happens when you're busy making other plans.", src:"John Lennon"},
+  {en:"The unexamined life is not worth living.", src:"Socrates"},
+  {en:"He who has a why to live can bear almost any how.", src:"Friedrich Nietzsche"},
+  {en:"The man who moves a mountain begins by carrying away small stones.", src:"Confucius"},
+  {en:"Well begun is half done.", src:"Aristotle"},
+  {en:"It is during our darkest moments that we must focus to see the light.", src:"Aristotle Onassis"},
+  {en:"In the middle of difficulty lies opportunity.", src:"Albert Einstein"},
+  {en:"What we achieve inwardly will change outer reality.", src:"Plutarch"},
+  {en:"Action is the foundational key to all success.", src:"Pablo Picasso"},
+  {en:"The journey of a thousand miles begins with one step.", src:"Lao Tzu"},
+  {en:"Nothing is impossible; the word itself says 'I'm possible'!", src:"Audrey Hepburn"},
+  {en:"The only impossible journey is the one you never begin.", src:"Tony Robbins"},
+  {en:"If you can dream it, you can do it.", src:"Walt Disney"},
+  {en:"The secret of getting ahead is getting started.", src:"Mark Twain"},
+  {en:"Genius is one percent inspiration and ninety-nine percent perspiration.", src:"Thomas Edison"},
+  {en:"Energy and persistence conquer all things.", src:"Benjamin Franklin"},
+  {en:"Champions keep playing until they get it right.", src:"Billie Jean King"},
+  {en:"I've failed over and over and over again in my life. And that is why I succeed.", src:"Michael Jordan"},
+  {en:"The best way to predict the future is to create it.", src:"Abraham Lincoln"},
+  {en:"What you do speaks so loud that I cannot hear what you say.", src:"Ralph Waldo Emerson"},
+  {en:"Fall seven times, stand up eight.", src:"Japanese Proverb"},
+  {en:"When you want to succeed as bad as you want to breathe, then you'll be successful.", src:"Eric Thomas"},
+  {en:"Your time is limited, so don't waste it living someone else's life.", src:"Steve Jobs"},
+  {en:"Everything you've ever wanted is on the other side of fear.", src:"网络流行语"},
+  {en:"Suffer now, shine later.", src:"健身圈流行语"},
+  {en:"Be so good they can't ignore you.", src:"Steve Martin"},
+  {en:"Lift heavy, live heavy.", src:"健身圈流行语"},
+  {en:"Eat clean, train mean, stay lean.", src:"健身圈流行语"},
+  {en:"Yesterday you said tomorrow. Just do it.", src:"Nike 广告语"},
+  {en:"If it doesn't challenge you, it doesn't change you.", src:"网络流行语"},
+  {en:"Push yourself, because no one else is going to do it for you.", src:"健身圈流行语"},
+  {en:"There is no shortcut to any place worth going.", src:"Helen Keller"},
+  {en:"The pain you feel today will be the strength you feel tomorrow.", src:"网络流行语"},
+  {en:"Make it happen. Shock everyone.", src:"Kobe Bryant"},
+  {en:"Great things never come from comfort zones.", src:"网络流行语"},
+  {en:"Don't count the days; make the days count.", src:"Muhammad Ali"}
+];
+function dayOfYear(d){
+  const start = new Date(d.getFullYear(), 0, 0);
+  return Math.floor((d - start) / 86400000);
+}
+function renderQuote(){
+  const d = new Date();
+  document.getElementById("qLabel").textContent = "每日一句 · " + fmtDate(d) + " " + (d.getDay()===0?"周日":WEEKDAYS[d.getDay()-1]);
+  loadDailyQuote(d);
+}
+function loadDailyQuote(d){
+  const en = document.getElementById("qText");
+  const src = document.getElementById("qSrc");
+  const showLocal = ()=>{
+    const q = QUOTES[dayOfYear(d) % QUOTES.length];
+    en.textContent = "\u201C" + q.en + "\u201D";
+    src.textContent = "— " + q.src;
+    src.style.display = "";
+    fitQuote();
+  };
+  // 优先联网：爱词霸每日一句（JSONP，sid 每日递增，不重复；无出处则不显示来源）
+  const cbName = "__iciba" + Date.now();
+  const cleanup = ()=>{ try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; } };
+  window[cbName] = (j)=>{
+    try{
+      if(j && j.content){
+        en.textContent = "\u201C" + j.content + "\u201D";
+        src.textContent = "";
+        src.style.display = "none";
+        fitQuote();
+      } else { showLocal(); }
+    }catch(e){ showLocal(); }
+    cleanup();
+  };
+  const s = document.createElement("script");
+  s.src = "https://open.iciba.com/dsapi/?callback=" + cbName;
+  s.onerror = ()=>{ showLocal(); cleanup(); };
+  setTimeout(()=>{ if(window[cbName]){ window[cbName](null); } }, 6000);
+  document.head.appendChild(s);
+}
+function fitQuote(){
+  const el = document.getElementById("qText");
+  if(!el) return;
+  el.style.fontSize = "";
+  const base = parseFloat(getComputedStyle(el).fontSize);
+  if(!base) return;
+  el.style.fontSize = base + "px";
+  let fs = base, guard = 0;
+  while(el.clientHeight > 2.4*fs + 1 && fs > 18 && guard++ < 80){
+    fs -= 1;
+    el.style.fontSize = fs + "px";
+  }
+}
+function applyTheme(){
+  const h = new Date().getHours();
+  document.documentElement.classList.toggle("dark", h >= 22 || h < 7);
+}
+let fitTimer;
+window.addEventListener("resize", ()=>{ clearTimeout(fitTimer); fitTimer = setTimeout(fitQuote, 150); });
+applyTheme();
+
+/* =========================================================
+   行情速览：每次打开 / 刷新自动抓取最新行情
+   数据源：腾讯行情（国内可直连、CORS 开放）
+   - 实时批量  qt.gtimg.cn（GBK 编码）
+   - 分时      web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股/指数）
+   - 日K       web.ifzq.gtimg.cn/appstock/app/fqkline/get
+   - 美股分时  东方财富 push2his trends2
+   - 美股日K   web.ifzq.gtimg.cn/appstock/app/usfqkline/get（优先），东财 kline 兜底
+   缓存：localStorage 兜底，断网时展示上次成功数据
+========================================================= */
+const TX_Q = "https://qt.gtimg.cn/q=";
+const TX_MIN = "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=";
+const TX_K = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
+const EM_TREND = "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=";
+const TX_USFQ = "https://web.ifzq.gtimg.cn/appstock/app/usfqkline/get?param=";
+
+/* ---- 精选股票池（74 支：美股 32 + A股 22 + 港股 16，按当日涨跌自动分组，涨跌各取前 20） ---- */
+const POOL = [
+  // 大板块指数（独立展示）
+  {name:"上证指数", tx:"sh000001", tag:"沪市风向标"},
+  {name:"纳斯达克", tx:"usIXIC", em:"100.NDX", tag:"美股科技风向标"},
+  {name:"标普500", tx:"usINX", em:"100.SPX", tag:"美股大盘基准"},
+  {name:"道琼斯", tx:"usDJI", em:"100.DJIA", tag:"蓝筹工业指数"},
+  // 美股 32
+  {name:"英伟达", tx:"usNVDA", em:"105.NVDA", tag:"AI 芯片龙头"},
+  {name:"苹果", tx:"usAAPL", em:"105.AAPL", tag:"消费电子巨头"},
+  {name:"微软", tx:"usMSFT", em:"105.MSFT", tag:"AI 软件 + 云"},
+  {name:"谷歌", tx:"usGOOGL", em:"105.GOOGL", tag:"AI 搜索龙头"},
+  {name:"亚马逊", tx:"usAMZN", em:"105.AMZN", tag:"电商 + 云双引擎"},
+  {name:"Meta", tx:"usMETA", em:"105.META", tag:"社交 + AI 广告"},
+  {name:"特斯拉", tx:"usTSLA", em:"105.TSLA", tag:"电动车 + 机器人"},
+  {name:"超威半导体", tx:"usAMD", em:"105.AMD", tag:"CPU/GPU 双线"},
+  {name:"英特尔", tx:"usINTC", em:"105.INTC", tag:"晶圆制造转型"},
+  {name:"奈飞", tx:"usNFLX", em:"105.NFLX", tag:"流媒体龙头"},
+  {name:"博通", tx:"usAVGO", em:"105.AVGO", tag:"AI 网络芯片"},
+  {name:"甲骨文", tx:"usORCL", em:"106.ORCL", tag:"云基建受益"},
+  {name:"Palantir", tx:"usPLTR", em:"105.PLTR", tag:"AI 软件黑马"},
+  {name:"美光", tx:"usMU", em:"105.MU", tag:"存储涨价周期"},
+  {name:"高通", tx:"usQCOM", em:"105.QCOM", tag:"手机芯片 + AI PC"},
+  {name:"超微电脑", tx:"usSMCI", em:"105.SMCI", tag:"AI 服务器"},
+  {name:"阿里巴巴", tx:"usBABA", em:"105.BABA", tag:"中概电商 + 云"},
+  {name:"拼多多", tx:"usPDD", em:"105.PDD", tag:"低价电商出海"},
+  {name:"哔哩哔哩", tx:"usBILI", em:"105.BILI", tag:"中概内容社区"},
+  {name:"PayPal", tx:"usPYPL", em:"105.PYPL", tag:"支付 + AI 交易"},
+  {name:"Coinbase", tx:"usCOIN", em:"105.COIN", tag:"加密交易所龙头"},
+  {name:"优步", tx:"usUBER", em:"105.UBER", tag:"全球网约车龙头"},
+  {name:"Shopify", tx:"usSHOP", em:"105.SHOP", tag:"电商 SaaS"},
+  {name:"赛富时", tx:"usCRM", em:"105.CRM", tag:"企业软件 + AI"},
+  {name:"Adobe", tx:"usADBE", em:"105.ADBE", tag:"设计软件 + AI"},
+  {name:"迪士尼", tx:"usDIS", em:"106.DIS", tag:"流媒体 + 主题乐园"},
+  {name:"耐克", tx:"usNKE", em:"106.NKE", tag:"全球运动服饰"},
+  {name:"沃尔玛", tx:"usWMT", em:"106.WMT", tag:"全球零售巨头"},
+  {name:"万事达", tx:"usMA", em:"106.MA", tag:"支付网络龙头"},
+  {name:"礼来", tx:"usLLY", em:"106.LLY", tag:"减肥药全球龙头"},
+  {name:"台积电", tx:"usTSM", em:"106.TSM", tag:"全球晶圆代工龙头"},
+  {name:"摩根大通", tx:"usJPM", em:"106.JPM", tag:"美国银行龙头"},
+  // A股 22
+  {name:"贵州茅台", tx:"sh600519", tag:"白酒龙头"},
+  {name:"中国平安", tx:"sh601318", tag:"保险 + 综合金融"},
+  {name:"招商银行", tx:"sh600036", tag:"零售银行龙头"},
+  {name:"宁德时代", tx:"sz300750", tag:"动力电池龙头"},
+  {name:"比亚迪", tx:"sz002594", tag:"新能源车龙头"},
+  {name:"紫金矿业", tx:"sh601899", tag:"铜金龙头"},
+  {name:"长江电力", tx:"sh600900", tag:"水电 + 高股息"},
+  {name:"赛力斯", tx:"sh601127", tag:"问界 + 华为系"},
+  {name:"中芯国际", tx:"sh688981", tag:"晶圆代工"},
+  {name:"东方财富", tx:"sz300059", tag:"互联网券商"},
+  {name:"科大讯飞", tx:"sz002230", tag:"AI 应用"},
+  {name:"隆基绿能", tx:"sh601012", tag:"光伏龙头"},
+  {name:"中际旭创", tx:"sz300308", tag:"光模块龙头"},
+  {name:"工业富联", tx:"sh601138", tag:"AI 服务器代工"},
+  {name:"立讯精密", tx:"sz002475", tag:"果链 + 消费电子"},
+  {name:"海康威视", tx:"sz002415", tag:"安防 + AI 视觉"},
+  {name:"万华化学", tx:"sh600309", tag:"化工新材料龙头"},
+  {name:"美的集团", tx:"sz000333", tag:"家电 + 机器人"},
+  {name:"恒瑞医药", tx:"sh600276", tag:"创新药龙头"},
+  {name:"北方华创", tx:"sz002371", tag:"半导体设备龙头"},
+  {name:"寒武纪", tx:"sh688256", tag:"国产 AI 芯片"},
+  {name:"中国船舶", tx:"sh600150", tag:"造船周期龙头"},
+  // 港股 16
+  {name:"腾讯控股", tx:"hk00700", tag:"游戏 + 社交 + AI"},
+  {name:"阿里巴巴-W", tx:"hk09988", tag:"电商 + 云 + AI"},
+  {name:"美团-W", tx:"hk03690", tag:"本地生活龙头"},
+  {name:"小米集团", tx:"hk01810", tag:"手机 + 汽车 + IoT"},
+  {name:"京东集团", tx:"hk09618", tag:"自营电商"},
+  {name:"快手-W", tx:"hk01024", tag:"短视频 + 电商"},
+  {name:"友邦保险", tx:"hk01299", tag:"亚洲保险龙头"},
+  {name:"药明生物", tx:"hk02269", tag:"生物药 CXO"},
+  {name:"网易", tx:"hk09999", tag:"游戏 + 音乐"},
+  {name:"携程集团", tx:"hk09961", tag:"OTA 龙头"},
+  {name:"安踏体育", tx:"hk02020", tag:"运动服饰龙头"},
+  {name:"海底捞", tx:"hk06862", tag:"连锁餐饮龙头"},
+  {name:"理想汽车", tx:"hk02015", tag:"增程 + 纯电"},
+  {name:"中芯国际", tx:"hk00981", tag:"晶圆代工 H 股"},
+  {name:"香港交易所", tx:"hk00388", tag:"亚洲交易枢纽"},
+  {name:"中国移动", tx:"hk00941", tag:"运营商 + 高股息"}
+];
+const INDICES = POOL.slice(0, 4);
+const STOCKS = POOL.slice(4);
+
+/* ---- 网络工具 ---- */
+async function fetchBuf(url, ms){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms || 5000);
+  try{
+    const res = await fetch(url, {signal: ctrl.signal});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return await res.arrayBuffer();
+  } finally { clearTimeout(t); }
+}
+async function fetchGBK(url){ return new TextDecoder("gbk").decode(await fetchBuf(url)); }
+async function fetchJSON(url){ return JSON.parse(new TextDecoder("utf-8").decode(await fetchBuf(url))); }
+/* 东财 JSONP（绕过 CORS，script 标签加载，参照新闻 JSONP 模式） */
+let __emcbSeq = 0;
+function fetchEMJSONP(url, ms){
+  return new Promise((resolve)=>{
+    const cb = "__emcb" + (++__emcbSeq);
+    const u = url + (url.indexOf("?") >= 0 ? "&" : "?") + "cb=" + cb;
+    const cleanup = ()=>{ clearTimeout(timer); try{ delete window[cb]; }catch(e){} s.remove(); };
+    const timer = setTimeout(()=>{ cleanup(); resolve(null); }, ms || 6000);
+    window[cb] = (d)=>{ cleanup(); resolve(d); };
+    const s = document.createElement("script");
+    s.referrerPolicy = "no-referrer";
+    s.src = u;
+    s.onerror = ()=>{ cleanup(); resolve(null); };
+    document.head.appendChild(s);
+  });
+}
+
+function parseQt(text){
+  const out = {};
+  const re = /v_([A-Za-z0-9]+)="([^"]*)"/g;
+  let m;
+  while((m = re.exec(text))){
+    const f = m[2].split("~");
+    if(f.length < 34 || !f[3]) continue;
+    const chg = +f[31], pct = +f[32];
+    out[m[1]] = {
+      name: f[1], code: f[2], price: +f[3], prev: +f[4], open: +f[5],
+      high: +f[33], low: +f[34], vol: +f[6], amount: +f[37],
+      mcap: +f[45], time: f[30],
+      chg: isFinite(chg)?chg:0, pct: isFinite(pct)?pct:0
+    };
+  }
+  return out;
+}
+
+/* ---- 格式化 ---- */
+function fmtPrice(v){ return (v==null||!isFinite(v))?"--":v.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function signed(v){ return v>0?"+":"-"; }
+function fmtPct(v){ return (v==null||!isFinite(v))?"--":(v>0?"+":"")+v.toFixed(2)+"%"; }
+function fmtNum(v){
+  if(v==null||!isFinite(v)||v===0) return "--";
+  const a = Math.abs(v);
+  if(a>=1e12) return (v/1e12).toFixed(2)+"万亿";
+  if(a>=1e8) return (v/1e8).toFixed(2)+"亿";
+  if(a>=1e4) return (v/1e4).toFixed(2)+"万";
+  return String(Math.round(v));
+}
+function themeColors(){
+  const s = getComputedStyle(document.documentElement);
+  return {
+    up: s.getPropertyValue("--up").trim() || "#d92c30",
+    down: s.getPropertyValue("--down").trim() || "#0f9d5c",
+    dash: s.getPropertyValue("--dash").trim() || "#b8b4ab",
+    axis: s.getPropertyValue("--axis").trim() || "#a9a69d",
+    ink: s.getPropertyValue("--ink").trim() || "#1f1e1d"
+  };
+}
+
+/* ---- 数据抓取 ---- */
+const QUOTE_CACHE_KEY = "mktCacheV10";
+function readQuoteCache(){
+  try{
+    const raw = localStorage.getItem(QUOTE_CACHE_KEY);
+    if(!raw) return null;
+    const c = JSON.parse(raw);
+    if(!c || !c.t || !c.q) return null;
+    return c;
+  }catch(e){ return null; }
+}
+function writeQuoteCache(q){
+  try{ localStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify({t: Date.now(), q: q})); }catch(e){}
+}
+
+async function withRetry(fn, tries, delay){
+  let last;
+  for(let i=0;i<tries;i++){
+    try{ return await fn(); }catch(e){ last = e; }
+    await new Promise(r=>setTimeout(r, delay));
+  }
+  throw last;
+}
+
+/* 分时加载：分时优先，失败自动降级近 5 日日K（带重试）
+   memoized：同一标的的多次渲染请求复用同一个加载任务，数据就绪后各自渲染 */
+function loadMinute(item){
+  if(item.pts || (item.kp && item.kp[5])) return Promise.resolve(item);
+  if(item._p) return item._p;
+  item._p = (async()=>{
+    try{
+      if(item.em){
+        try{
+          const j = await withRetry(()=>fetchEMJSONP(EM_TREND + item.em + "&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays=1&iscr=0", 4000), 1, 0);
+          const arr = j && j.data && j.data.trends;
+          if(arr && arr.length > 2){
+            item.pts = arr.map(s=>{ const p = s.split(","); return {t:p[0].slice(11,16), v:+p[2]}; });
+            item.ptDate = arr[0].split(",")[0].slice(0,10);
+            item.fb = "";
+          }
+        }catch(e){}
+      } else {
+        const j = await withRetry(()=>fetchJSON(TX_MIN + item.tx), 3, 500);
+        const node = j && j.data && j.data[item.tx] && j.data[item.tx].data;
+        const arr = node && node.data;
+        if(arr && arr.length && arr[0] && arr[0].trim() !== "0"){
+          item.pts = arr.map(s=>{ const p = s.split(" "); return {t: p[0].slice(0,2)+":"+p[0].slice(2,4), v:+p[1]}; });
+          item.ptDate = node.date || "";
+          item.fb = "";
+        }
+      }
+    }catch(e){}
+    if(!item.pts){
+      try{
+        const n = await withRetry(()=>loadK(item, 5), 3, 500);
+        item.fb = n > 0 ? "近5日" : "";
+      }catch(e){ item.fb = ""; }
+    }
+    return item;
+  })();
+  return item._p;
+}
+
+async function loadK(item, n, ytd){
+  // 东财 klines 每项是 "日期,开,收,高,低,..." 逗号分隔字符串；兼容嵌套数组
+  const clean = kl => kl.map(r=>{
+    const p = Array.isArray(r) ? r : String(r).split(",");
+    return {t: String(p[0]).slice(5), v:+p[2]};
+  }).filter(x=>isFinite(x.v) && x.v > 0);
+  // 美股/指数日K：优先腾讯 usfqkline（体积小、CORS 开放、全部标的可用），失败再退东财 kline
+  if(item.em){
+    try{
+      const usSym = (item.q && item.q.code) ? ("us" + item.q.code) : item.tx;
+      const j = await fetchJSON(TX_USFQ + usSym + ",day,,," + (ytd ? 400 : Math.max(n, 5)) + ",qfq");
+      const node = j && j.data && j.data[usSym];
+      const tkl = node ? (node.qfqday || node.day || []) : [];
+      if(tkl && tkl.length){
+        item.kp = item.kp || {};
+        if(ytd){
+          const year = String(new Date().getFullYear());
+          const yk = tkl.filter(s=>String(Array.isArray(s)?s[0]:String(s).split(",")[0]).startsWith(year + "-"));
+          item.kp.ytd = clean(yk.length ? yk : tkl);
+          return item.kp.ytd.length;
+        }
+        const sl = tkl.length > n ? tkl.slice(tkl.length - n) : tkl;
+        item.kp[n] = clean(sl);
+        return item.kp[n].length;
+      }
+    }catch(e){}
+    const lmt = ytd ? 400 : n;
+    const j = await fetchEMJSONP("https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=" + item.em
+      + "&klt=101&fqt=1&beg=0&end=20500101&lmt=" + lmt
+      + "&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61");
+    const klines = (j && j.data && j.data.klines) || [];
+    if(klines && klines.length){
+      item.kp = item.kp || {};
+      if(ytd){
+        const year = String(new Date().getFullYear());
+        const yk = klines.filter(s=>s.startsWith(year + "-"));
+        item.kp.ytd = clean(yk.length ? yk : klines);
+        return item.kp.ytd.length;
+      }
+      const kl = klines.length > n ? klines.slice(klines.length - n) : klines;
+      item.kp[n] = clean(kl);
+      return item.kp[n].length;
+    }
+    return 0;
+  }
+  if(ytd){
+    const year = new Date().getFullYear();
+    const j = await fetchJSON(TX_K + item.tx + ",day," + year + "-01-01," + year + "-12-31,400,qfq");
+    const node = j && j.data && j.data[item.tx];
+    const kl = node ? (node.qfqday || node.day || []) : [];
+    item.kp = item.kp || {};
+    item.kp.ytd = clean(kl);
+    return item.kp.ytd.length;
+  }
+  const j = await fetchJSON(TX_K + item.tx + ",day,,," + n + ",qfq");
+  const node = j && j.data && j.data[item.tx];
+  const kl0 = node ? (node.qfqday || node.day || []) : [];
+  // 腾讯对美股会忽略数量参数返回全量：前端截取最近 n 根
+  const kl = kl0.length > n ? kl0.slice(kl0.length - n) : kl0;
+  item.kp = item.kp || {};
+  item.kp[n] = clean(kl);
+  return item.kp[n].length;
+}
+
+/* ---- SVG 迷你图：分时 + 虚线基准（Apple 风格） ---- */
+let sparkUid = 0;
+function thin(arr, max){
+  if(arr.length <= max) return arr;
+  const step = (arr.length-1)/(max-1);
+  const out = [];
+  for(let i=0;i<max;i++) out.push(arr[Math.round(i*step)]);
+  return out;
+}
+function sparkSVG(item, color, w, h){
+  const tc = themeColors();
+  let pts = item.pts || (item.kp && (item.kp[5] || item.kp["1mo"])) || [];
+  pts = thin(pts, 130).filter(p=>p && isFinite(p.v));
+  if(pts.length < 2){
+    // 统一兜底：昨收 → 现价 直线（涨跌颜色正确），不再使用新浪图片，保证所有迷你图都是 SVG
+    const q = item.q;
+    if(q && isFinite(q.prev) && q.prev > 0 && isFinite(q.price) && q.price > 0){
+      pts = [{t:"", v:q.prev}, {t:"", v:q.price}];
+    }
+  }
+  if(pts.length < 2){
+    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'"><text x="'+(w/2)+'" y="'+(h/2+4)+'" text-anchor="middle" font-size="10" fill="'+tc.axis+'">暂无数据</text></svg>';
+  }
+  const vals = pts.map(p=>p.v);
+  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  const pad = Math.max((max-min)*0.06, (max===0?1:max)*0.0008);
+  min -= pad; max += pad;
+  const span = (max-min) || 1;
+  const n = pts.length;
+  const padX = 5, padY = 5;
+  const px = i => padX + i/(n-1)*(w-2*padX);
+  const py = v => padY + (1-(v-min)/span)*(h-2*padY);
+  const line = pts.map((p,i)=>px(i).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
+  const x0 = px(0), x1 = px(n-1), yb = h-padY/2;
+  const area = pts.map((p,i)=>px(i).toFixed(1)+","+py(p.v).toFixed(1)).join(" L ") + " L " + x1.toFixed(1) + "," + yb.toFixed(1) + " L " + x0.toFixed(1) + "," + yb.toFixed(1) + " Z";
+  const uid = "sp" + (++sparkUid);
+  const last = pts[n-1];
+  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'">'
+    + '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="'+color+'" stop-opacity="0.28"/>'
+    + '<stop offset="1" stop-color="'+color+'" stop-opacity="0"/>'
+    + '</linearGradient></defs>'
+    // 基准虚线：首点 → 末点（Apple 涨幅基准线）
+    + '<line x1="'+x0.toFixed(1)+'" y1="'+py(pts[0].v).toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+py(last.v).toFixed(1)+'" stroke="'+tc.dash+'" stroke-width="1" stroke-dasharray="3 3" opacity="0.85"/>'
+    + '<path d="M '+area+'" fill="url(#'+uid+')"/>'
+    + '<polyline fill="none" stroke="'+color+'" stroke-width="3.5" opacity="0.14" stroke-linejoin="round" stroke-linecap="round" points="'+line+'"/>'
+    + '<polyline fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" points="'+line+'"/>'
+    + '<circle cx="'+x1.toFixed(1)+'" cy="'+py(last.v).toFixed(1)+'" r="2.6" fill="'+color+'" stroke="#fff" stroke-width="1.1"/>'
+    + '</svg>';
+}
+
+/* ---- 渲染 ---- */
+function itemOf(q, pool){
+  const v = q[pool.tx];
+  if(!v) return null;
+  return {
+    pool: pool, q: v, tx: pool.tx, em: pool.em, pts: null, kp: {}, fb: "", minuteLoading: false,
+    isUp: v.pct > 0, isFlat: v.pct === 0
+  };
+}
+function renderMarket(q, tag){
+  const tc = themeColors();
+  const meta = document.getElementById("mktMeta");
+  const t = new Date(q._t || Date.now());
+  meta.textContent = (tag ? tag + " · " : "") + "数据时间 " + t.getFullYear() + "-" + pad(t.getMonth()+1) + "-" + pad(t.getDate()) + " " + pad(t.getHours()) + ":" + pad(t.getMinutes());
+  const box = document.getElementById("mktBox");
+
+  const idxItems = INDICES.map(p=>itemOf(q, p)).filter(Boolean);
+  const all = STOCKS.map(p=>itemOf(q, p)).filter(Boolean);
+  idxItems.concat(all).forEach(it=>{ window.__items[it.pool.tx] = it; });
+  const ups = all.filter(i=>i.isUp).sort((a,b)=>Math.abs(b.q.pct)-Math.abs(a.q.pct)).slice(0,20);
+  const downs = all.filter(i=>!i.isUp).sort((a,b)=>Math.abs(b.q.pct)-Math.abs(a.q.pct)).slice(0,20);
+
+  const rowHtml = (it) => {
+    const c = it.q.pct >= 0 ? tc.up : tc.down;
+    const priceTxt = isFinite(it.q.price) && it.q.price > 0 ? fmtPrice(it.q.price) : "--";
+    return '<div class="mkt-row" data-tx="'+it.pool.tx+'">'
+      + '<div class="mkt-info">'
+      + '<div class="mkt-name">'+it.pool.name+'<span class="mkt-code">'+it.pool.tx.slice(2).toUpperCase()+'</span></div>'
+      + '<div class="mkt-price" style="color:'+c+'">'+priceTxt+' <span class="mkt-chg">'+(it.q.chg>0?"+":"")+fmtPrice(it.q.chg)+' '+fmtPct(it.q.pct)+'</span></div>'
+      + '<div class="mkt-tag">'+it.pool.tag+'</div>'
+      + '</div>'
+      + '<div class="mkt-chart" data-chart="'+it.pool.tx+'"></div>'
+      + '</div>';
+  };
+  const chunk = (arr, n)=>{ const o=[]; for(let i=0;i<arr.length;i+=n) o.push(arr.slice(i,i+n)); return o; };
+  const groupsHtml = (gs)=> gs.map(g=>'<div class="mkt-group">'+g.map(rowHtml).join("")+'</div>').join("");
+  const upGroups = chunk(ups, 4), downGroups = chunk(downs, 4);
+
+  box.innerHTML =
+    '<div class="mkt-sec">大板块<span class="mkt-count">'+idxItems.length+'</span></div>'
+    + '<div class="mkt-list">'+idxItems.map(rowHtml).join("")+'</div>'
+    + (ups.length? '<div class="mkt-sec">上涨<span class="mkt-count up">'+ups.length+'</span></div>'
+      + '<div class="mkt-scroll"><div class="mkt-track">'+groupsHtml(upGroups)+'</div></div>'
+      : '<div class="mkt-sec">上涨<span class="mkt-count up">0</span></div><div class="empty">暂无上涨标的</div>')
+    + (downs.length? '<div class="mkt-sec">下跌<span class="mkt-count down">'+downs.length+'</span></div>'
+      + '<div class="mkt-scroll"><div class="mkt-track">'+groupsHtml(downGroups)+'</div></div>'
+      : '<div class="mkt-sec">下跌<span class="mkt-count down">0</span></div><div class="empty">暂无下跌标的</div>');
+
+  // 每屏一组 4 条：组宽度对齐滚动容器
+  fitGroups();
+
+  // 今日逻辑（动态）
+  const logic = document.createElement("div");
+  logic.className = "mkt-logic";
+  const leadUp = ups.slice(0,3).map(i=>i.pool.name+" "+fmtPct(i.q.pct)).join("、");
+  const leadDown = downs.slice(0,3).map(i=>i.pool.name+" "+fmtPct(i.q.pct)).join("、");
+  logic.innerHTML = "<b>今日逻辑</b>：" +
+    (leadUp ? "领涨 "+leadUp+"；" : "暂无上涨标的；") +
+    (leadDown ? "领跌 "+leadDown+"。" : "暂无下跌标的。");
+  box.appendChild(logic);
+
+  // 全量并发加载分时（并发 6），每支渲染迷你图
+  loadAllCharts();
+  bindClick();
+}
+function loadAllCharts(){
+  const queue = [];
+  let running = 0;
+  const pump = ()=>{
+    while(running < 6 && queue.length){
+      const job = queue.shift();
+      running++;
+      Promise.resolve().then(job).finally(()=>{ running--; pump(); });
+    }
+  };
+  const loadOne = (el)=>{
+    if(!el || el.querySelector("svg")) return;
+    const tx = el.getAttribute("data-chart");
+    const it = window.__items && window.__items[tx];
+    if(!it) return;
+    queue.push(()=>loadMinute(it).then(()=>{
+      const c = it.q.pct >= 0 ? themeColors().up : themeColors().down;
+      el.innerHTML = sparkSVG(it, c, el.clientWidth || 132, el.clientHeight || 40);
+    }).catch(()=>{}));
+    pump();
+  };
+  // 首屏：指数 4 + 每条轨道第一组（4 条行卡片）立即加载
+  const scrollers = document.querySelectorAll(".mkt-scroll");
+  scrollers.forEach(sc=>{
+    const cards = sc.querySelectorAll(".mkt-row");
+    for(let i=0;i<Math.min(4, cards.length);i++) loadOne(cards[i].querySelector("[data-chart]"));
+    // 横向滚动到附近时再加载其余行卡片
+    sc.addEventListener("scroll", ()=>{
+      const right = sc.scrollLeft + sc.clientWidth + 240;
+      sc.querySelectorAll(".mkt-row").forEach(cd=>{
+        if(cd.offsetLeft - sc.scrollLeft < right) loadOne(cd.querySelector("[data-chart]"));
+      });
+    }, {passive:true});
+  });
+  document.querySelectorAll(".mkt-list .mkt-row [data-chart]").forEach(loadOne);
+}
+function bindClick(){
+  const rows = document.querySelectorAll(".mkt-row");
+  rows.forEach(el=>el.addEventListener("click", ()=>openDetail(el.getAttribute("data-tx"))));
+}
+
+/* ---- 加载主流程 ---- */
+async function loadMarket(){
+  const cache = readQuoteCache();
+  if(cache){
+    cache.q._t = cache.t;
+    renderMarket(cache.q, "缓存 · " + fmtTime(cache.t));
+  }
+  try{
+    const codes = POOL.map(p=>p.tx).join(",");
+    const text = await fetchGBK(TX_Q + codes);
+    const q = parseQt(text);
+    if(!Object.keys(q).length) throw new Error("empty");
+    q._t = Date.now();
+    writeQuoteCache(q);
+    renderMarket(q, "实时 · " + fmtTime(q._t));
+  }catch(e){
+    if(cache) toast("实时行情获取失败，已显示缓存数据");
+    else {
+      const box = document.getElementById("mktBox");
+      box.innerHTML = '<div class="empty">行情获取失败，可点右上角“刷新”重试</div>';
+      document.getElementById("mktMeta").textContent = "未能获取行情";
+      toast("行情获取失败，请检查网络后刷新");
+    }
+  }
+}
+
+/* ---- 详情弹层（Apple 风格：1天/1周/1月/3月/6月/年初至今） ---- */
+const RANGES = [
+  {r:"1d", label:"1天"},
+  {r:"5d", label:"1周"},
+  {r:"1mo", label:"1月"},
+  {r:"3mo", label:"3月"},
+  {r:"6mo", label:"6月"},
+  {r:"ytd", label:"年初至今"}
+];
+let detailTx = null, detailRange = "1d";
+
+function openDetail(tx){
+  detailTx = tx;
+  detailRange = "1d";
+  setWeekTabVisible(true);
+  const it = window.__items && window.__items[tx];
+  const pool = POOL.find(p=>p.tx===tx);
+  if(!it || !pool) return;
+  const tc = themeColors();
+  const c = it.q.pct >= 0 ? tc.up : tc.down;
+  document.getElementById("dlTitle").textContent = pool.name;
+  document.getElementById("dlSub").textContent = tx.slice(2).toUpperCase() + " ｜ " + (it.q.time || "");
+  document.getElementById("dlPrice").textContent = fmtPrice(it.q.price);
+  const chg = document.getElementById("dlChg");
+  chg.textContent = (it.q.chg>0?"+":"")+fmtPrice(it.q.chg)+"  "+fmtPct(it.q.pct);
+  chg.style.color = c;
+  renderDetailStats(it);
+  switchTab();
+  document.getElementById("detailMask").hidden = false;
+}
+function closeDetail(){
+  document.getElementById("detailMask").hidden = true;
+  detailTx = null;
+}
+function renderDetailStats(it){
+  const q = it.q;
+  const rows = [
+    ["今日开盘", fmtPrice(q.open)],
+    ["今日最高", fmtPrice(q.high)],
+    ["今日最低", fmtPrice(q.low)],
+    ["成交量", fmtNum(q.vol)],
+    ["成交额", fmtNum(q.amount * 1e4)],
+    ["总市值", fmtNum(q.mcap * 1e8)]
+  ];
+  document.getElementById("dlStats").innerHTML =
+    rows.map(r=>'<div class="kv"><span class="k">'+r[0]+'</span><span class="v">'+r[1]+'</span></div>').join("");
+}
+function setWeekTabVisible(show){
+  const b = document.querySelector('#dlTabs button[data-r="5d"]');
+  if(b) b.style.display = show ? "" : "none";
+}
+function switchTab(){
+  document.querySelectorAll("#dlTabs button").forEach(b=>b.classList.toggle("on", b.dataset.r===detailRange));
+  const chart = document.getElementById("dlChart");
+  chart.innerHTML = '<div class="dl-loading">加载中…</div>';
+  const it = window.__items && window.__items[detailTx];
+  if(!it){ return; }
+  (async()=>{
+    let pts = null, fb = "";
+    if(detailRange === "1d"){
+      await loadMinute(it);
+      pts = it.pts || (it.kp && it.kp[5]);
+      fb = it.fb || "";
+      setWeekTabVisible(!!it.pts);
+    } else if(detailRange === "ytd"){
+      if(!it.kp || !it.kp.ytd){ await loadK(it, 0, true); }
+      pts = it.kp && it.kp.ytd;
+    } else {
+      const n = detailRange==="5d"?5 : detailRange==="1mo"?22 : detailRange==="3mo"?66 : 130;
+      if(!it.kp || !it.kp[n]){ await loadK(it, n); }
+      pts = it.kp && it.kp[n];
+    }
+    const chg = document.getElementById("dlChg");
+    const tc = themeColors();
+    if(!pts || pts.length < 3){
+      // 统一兜底：昨收 → 现价 直线（涨跌数字用今日值，颜色正确），不再使用新浪图片
+      const q = it.q;
+      if(q && isFinite(q.prev) && q.prev > 0 && isFinite(q.price) && q.price > 0){
+        const p2 = [{t:"昨收", v:q.prev}, {t:"现价", v:q.price}];
+        const c2 = q.price >= q.prev ? tc.up : tc.down;
+        const chgV = q.price - q.prev;
+        chg.textContent = (chgV>0?"+":"")+fmtPrice(chgV)+"  "+fmtPct(q.pct);
+        chg.style.color = c2;
+        chart.innerHTML = bigSVG(p2, c2, detailRange, "仅今日行情");
+        return;
+      }
+      chart.innerHTML = '<div class="dl-loading">暂无该区间数据</div>';
+      return;
+    }
+    // 按当前档位区间涨跌上色
+    const first = pts[0].v, last = pts[pts.length-1].v;
+    const up = last >= first;
+    const c = up ? tc.up : tc.down;
+    if(detailRange === "1d"){
+      chg.textContent = (it.q.chg>0?"+":"")+fmtPrice(it.q.chg)+"  "+fmtPct(it.q.pct);
+      chg.style.color = it.q.pct >= 0 ? tc.up : tc.down;
+    } else {
+      const chgV = last - first, pct = first ? (chgV/first)*100 : 0;
+      chg.textContent = (chgV>0?"+":"")+fmtPrice(chgV)+"  "+fmtPct(pct);
+      chg.style.color = c;
+    }
+    chart.innerHTML = bigSVG(pts, c, detailRange, fb);
+  })();
+}
+function bigSVG(pts, color, range, fb){
+  pts = thin(pts, 200).filter(p=>p && isFinite(p.v));
+  const tc = themeColors();
+  const w = 420, h = 236;
+  const padL = 10, padR = 58, padT = 14, padB = 26;
+  const vals = pts.map(p=>p.v);
+  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  const pad = Math.max((max-min)*0.05, 0.0001);
+  min -= pad; max += pad;
+  const span = (max-min) || 1;
+  const n = pts.length;
+  const px = i => padL + i/(n-1)*(w-padL-padR);
+  const py = v => padT + (1-(v-min)/span)*(h-padT-padB);
+  const line = pts.map((p,i)=>px(i).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
+  const uid = "big" + (++sparkUid);
+  const yb = h-padB;
+  const area = pts.map((p,i)=>px(i).toFixed(1)+","+py(p.v).toFixed(1)).join(" L ") + " L " + px(n-1).toFixed(1) + "," + yb.toFixed(1) + " L " + px(0).toFixed(1) + "," + yb.toFixed(1) + " Z";
+  // Y 轴刻度（3 档，右侧）
+  const ticks = [];
+  for(let i=0;i<=3;i++) ticks.push({v: min + span*i/3, x: w-padR+4, y: py(min + span*i/3)});
+  const tickHtml = ticks.map(t=>'<text x="'+t.x+'" y="'+(t.y+3)+'" font-size="10" fill="'+tc.axis+'">'+fmtPrice(t.v)+'</text>').join("");
+  // X 轴刻度（首/中/尾）
+  const xi = [0, Math.floor((n-1)/2), n-1];
+  const xHtml = xi.map(i=>'<text x="'+px(i)+'" y="'+(h-8)+'" text-anchor="'+(i===0?"start":i===n-1?"end":"middle")+'" font-size="10" fill="'+tc.axis+'">'+pts[i].t+'</text>').join("");
+  return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">'
+    + '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="'+color+'" stop-opacity="0.22"/>'
+    + '<stop offset="1" stop-color="'+color+'" stop-opacity="0"/>'
+    + '</linearGradient></defs>'
+    + '<path d="M '+area+'" fill="url(#'+uid+')"/>'
+    + '<polyline fill="none" stroke="'+color+'" stroke-width="5" opacity="0.12" stroke-linejoin="round" stroke-linecap="round" points="'+line+'"/>'
+    + '<polyline fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="'+line+'"/>'
+    + '<circle cx="'+px(n-1).toFixed(1)+'" cy="'+py(pts[n-1].v).toFixed(1)+'" r="3.5" fill="'+color+'" stroke="#fff" stroke-width="1.4"/>'
+    + tickHtml + xHtml
+    + (fb ? '<text x="'+(w-2)+'" y="12" text-anchor="end" font-size="10" fill="'+tc.axis+'">'+fb+'</text>' : "")
+    + '</svg>';
+}
+
+/* 事件 */
+document.getElementById("dlClose").addEventListener("click", closeDetail);
+document.getElementById("detailMask").addEventListener("click", e=>{ if(e.target.id==="detailMask") closeDetail(); });
+document.getElementById("dlTabs").addEventListener("click", e=>{
+  const b = e.target.closest("button");
+  if(!b) return;
+  detailRange = b.dataset.r;
+  switchTab();
+});
+
+/* toast */
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+/* ---- 今日新闻速递（新浪财经 7x24，每次打开自动抓取） ---- */
+const NEWS_URL = "https://zhibo.sina.com.cn/api/zhibo/feed?page=1&page_size=60&zhibo_id=152&tag_id=0&callback=";
+let newsRendered = false;
+let newsStore = [];
+const NEWS_HOT = ["美联储","加息","降息","央行","LPR","MLF","降准","国务院","证监会","财政部","商务部","国家统计局","全会","政治局","十五五","政府工作报告","关税","CPI","PPI","GDP","汇率","美元","人民币","利率","通胀","外汇","专项债","特别国债","房地产","楼市","金价","油价","原油","黄金","A股","港股","外资","北向","救市","入市","中长期资金","芯片","半导体","人工智能","机器人","新能源","光伏","锂电","汽车","出口","进口","贸易","谈判","峰会","访华","访美","出访","会见","签署","合作","协议","经济","增长","产业"];
+const NEWS_MIL = ["军事","美军","国防","军演","演习","航母","战机","导弹","解放军","俄军","台海","南海","边境","核武","军工","部队","朝鲜","乌克兰","俄罗斯","伊朗","中东","印太","部署","武器","军舰","外交部","国防部","制裁","冲突","战争","局势","警告","大使馆","同盟","北约"];
+function stripHtml(h){
+  const div = document.createElement("div");
+  div.innerHTML = h;
+  return (div.textContent || "").replace(/\s+/g, " ").trim();
+}
+function readNewsCache(){
+  try{ const c = JSON.parse(localStorage.getItem("newsCache") || "null"); if(c && Array.isArray(c.items)) return c; }catch(e){}
+  return null;
+}
+function writeNewsCache(items){
+  try{ localStorage.setItem("newsCache", JSON.stringify({t: new Date().toISOString(), items})); }catch(e){}
+}
+function newsItemHtml(it, inSheet){
+  const esc = s => String(s || "").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+  const tagTxt = it.tag ? '<span class="news-tag">'+esc(it.tag)+'</span>' : "";
+  // 弹层列表只保留时间（用户要求）；主页预览保留时间+来源
+  const m = inSheet
+    ? '<div class="news-m"><span>' + esc((it.time || "").slice(5, 16)) + '</span></div>'
+    : '<div class="news-m"><span>' + esc((it.time || "").slice(5, 16)) + '</span><span>新浪财经 7x24</span></div>';
+  return '<div class="news-item" data-url="' + esc(it.url) + '" data-t="' + esc(it.t) + '" data-f="' + esc(it.full || "") + '">'
+    + tagTxt
+    + '<div class="news-txt">'
+    + '<div class="news-t">' + esc(it.t) + '</div>'
+    + m
+    + '</div></div>';
+}
+function renderNews(){
+  const list = newsStore;
+  const now = new Date();
+  document.getElementById("newsMeta").textContent = "数据时间 " + fmtDate(now) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + " ｜ 影响股市的大事";
+  document.getElementById("newsPreview").innerHTML = list.slice(0, 5).map(i=>newsItemHtml(i, false)).join("");
+  document.getElementById("newsList").innerHTML = list.map(i=>newsItemHtml(i, true)).join("");
+  document.getElementById("sheetMeta").textContent = "数据时间 " + fmtDate(now) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + " ｜ 点击条目打开原网站";
+  document.querySelectorAll(".news-item").forEach(el=>{
+    el.addEventListener("click", ()=>{
+      openNewsReader(el.dataset.url || "", el.dataset.t || "", el.dataset.f || "");
+    });
+  });
+}
+function openNewsReader(url, title, full){
+  if(!url) return;
+  const sheet = document.querySelector(".news-sheet");
+  if(window.innerWidth < 900){
+    sheet.style.height = "85vh";
+    sheet.style.maxHeight = "none";
+  }
+  document.getElementById("newsList").style.display = "none";
+  document.getElementById("newsReader").hidden = false;
+  document.getElementById("readerTitle").textContent = title;
+  document.getElementById("readerOpen").href = url;
+  // 快讯有全文 → 纯文本阅读（无广告无导航）；否则内嵌原文页
+  const textEl = document.getElementById("readerText");
+  const frameEl = document.getElementById("readerFrame");
+  if(full){
+    frameEl.style.display = "none";
+    textEl.hidden = false;
+    textEl.innerHTML = "<div class=\"rt-full\">" + full.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;") + "</div>";
+  } else {
+    textEl.hidden = true;
+    frameEl.style.display = "";
+    frameEl.src = url;
+  }
+}
+function closeNewsReader(){
+  const f = document.getElementById("readerFrame");
+  f.src = "about:blank";
+  const sheet = document.querySelector(".news-sheet");
+  if(window.innerWidth < 900){
+    sheet.style.height = "";
+    sheet.style.maxHeight = "";
+  }
+  document.getElementById("newsReader").hidden = true;
+  document.getElementById("newsList").style.display = "";
+}
+function fetchNews(){
+  newsRendered = false;
+  fetchSinaNews();
+  fetchEMNews();
+  fetchHotNews();
+}
+function fetchSinaNews(){
+  const cbName = "__sinaNews" + Date.now();
+  const cleanup = ()=>{ try{ delete window[cbName]; }catch(e){ window[cbName] = undefined; } };
+  window[cbName] = (j)=>{
+    try{
+      const feed = (((j || {}).result || {}).data || {}).feed || {};
+      const raw = feed.list || [];
+      const items = raw.map(it=>{
+        const t = stripHtml(it.rich_text || "");
+        const tag = ((it.tag || [])[0] || {}).name || "快讯";
+        const full = stripHtml(it.rich_text || "").replace(/^【[^】]*】/, "");
+        return {t, tag, time: it.create_time || "", url: it.docurl || "", full};
+      }).filter(i=>i.t && i.url)
+        .map(i=>({...i, s: NEWS_HOT.reduce((n,k)=>i.t.includes(k)?n+1:n, 0) + NEWS_MIL.reduce((n,k)=>i.t.includes(k)?n+2:n, 0)}))
+        .filter(i=>i.s >= 1)
+        .sort((a,b)=>b.s - a.s || b.time.localeCompare(a.time))
+        .slice(0, 40)
+        .map(i=>({t:i.t, tag:i.tag, time:i.time, url:i.url, full:i.full, cat:"fin"}));
+      if(items.length && !newsRendered){
+        newsRendered = true;
+        newsStore = items;
+        renderNews();
+        writeNewsCache(newsStore);
+      }
+    }catch(e){}
+    cleanup();
+  };
+  const s = document.createElement("script");
+  s.referrerPolicy = "no-referrer";
+  s.src = NEWS_URL + cbName;
+  s.onerror = cleanup;
+  setTimeout(()=>{ if(window[cbName]){ cleanup(); } }, 5000);
+  document.head.appendChild(s);
+}
+function fetchHotNews(){
+  const chs = [["cn","2516","国内"],["intl","2517","国际"],["soc","2518","社会"]];
+  let pending = chs.length;
+  const results = [];
+  chs.forEach(pair=>{
+    const catKey = pair[0], lid = pair[1], tagName = pair[2];
+    const cbName = "__sinaRoll" + lid + Date.now();
+    const done = ()=>{
+      if(--pending === 0){
+        const seen = {}; const hot = [];
+        results.forEach(i=>{ if(!seen[i.t]){ seen[i.t]=1; hot.push(i); } });
+        // 军事/地缘内容加权排前
+        hot.sort((a,b)=>(b.s||0)-(a.s||0) || b.time.localeCompare(a.time));
+        if(hot.length) appendNews(hot.slice(0, 45));
+      }
+    };
+    window[cbName] = (j)=>{
+      try{
+        const data = (((j || {}).result || {}).data) || [];
+        data.forEach(it=>{
+          const t = stripHtml(it.title || "");
+          const full = stripHtml(it.intro || "");
+          const url = (it.url || "").replace(/^http:/, "https:");
+          if(t && url) results.push({
+            t, tag: tagName, cat: catKey,
+            time: fmtU(it.ctime), url, full,
+            s: NEWS_HOT.reduce((n,k)=>t.includes(k)?n+1:n, 0) + NEWS_MIL.reduce((n,k)=>t.includes(k)?n+3:n, 0)
+          });
+        });
+      }catch(e){}
+      try{ delete window[cbName]; }catch(e){}
+      done();
+    };
+    const s = document.createElement("script");
+    s.referrerPolicy = "no-referrer";
+    s.src = "https://feed.mix.sina.com.cn/api/roll/get?pageid=153&lid=" + lid + "&num=30&page=1&r=" + Math.random() + "&callback=" + cbName;
+    s.onerror = ()=>{ try{ delete window[cbName]; }catch(e){} done(); };
+    setTimeout(()=>{ if(window[cbName]){ try{ delete window[cbName]; }catch(e){} done(); } }, 5000);
+    document.head.appendChild(s);
+  });
+}
+function fmtU(ts){
+  if(!ts) return "";
+  try{
+    const d = new Date(Number(ts) * 1000);
+    return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  }catch(e){ return ""; }
+}
+function appendNews(hot){
+  newsStore = newsStore.concat(hot).slice(0, 60);
+  renderNews();
+  writeNewsCache(newsStore);
+}
+function fetchEMNews(){
+  const s = document.createElement("script");
+  s.referrerPolicy = "no-referrer";
+  s.src = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_102_ajax_50_1_.html";
+  let done = false;
+  const finish = ()=>{ if(done) return; done = true; try{ delete window.ajax; }catch(e){} s.remove(); };
+  s.onload = ()=>{
+    try{
+      const raw = (window.ajax || {}).LivesList || [];
+      const items = raw.map(it=>({
+        t: it.title || "",
+        tag: it.simtype_zh || "快讯",
+        time: it.showtime || it.ordertime || "",
+        url: (it.url_w || it.url_m || "").replace(/^http:/, "https:"),
+        full: (it.digest || "").trim() || ""
+      })).filter(i=>i.t && i.url)
+        .map(i=>({...i, s: NEWS_HOT.reduce((n,k)=>i.t.includes(k)?n+1:n, 0) + NEWS_MIL.reduce((n,k)=>i.t.includes(k)?n+2:n, 0)}))
+        .sort((a,b)=>b.s - a.s || b.time.localeCompare(a.time))
+        .slice(0, 30)
+        .map(i=>({t:i.t, tag:i.tag, time:i.time, url:i.url, full:i.full, cat:"fin"}));
+      if(items.length && !newsRendered){
+        newsRendered = true;
+        newsStore = items;
+        renderNews();
+        writeNewsCache(newsStore);
+      }
+      else if(!newsRendered) failNews();
+    }catch(e){ if(!newsRendered) failNews(); }
+    finish();
+  };
+  s.onerror = ()=>{ if(!newsRendered) failNews(); finish(); };
+  setTimeout(()=>{ if(!done){ failNews(); finish(); } }, 5000);
+  document.head.appendChild(s);
+}
+function failNews(){
+  const cache = readNewsCache();
+  if(cache){ newsStore = cache.items; renderNews(); }
+  else {
+    document.getElementById("newsMeta").textContent = "新闻获取失败，请检查网络后刷新";
+    document.getElementById("newsPreview").innerHTML = '<div class="empty">暂无新闻</div>';
+    document.getElementById("newsList").innerHTML = '<div class="empty">暂无新闻</div>';
+    document.getElementById("sheetMeta").textContent = "未获取到新闻";
+  }
+}
+function openNewsSheet(){
+  document.body.classList.add("lock-scroll");
+  document.getElementById("newsMask").hidden = false;
+}
+function closeNewsSheet(){
+  document.getElementById("newsMask").hidden = true;
+  document.body.classList.remove("lock-scroll");
+}
+
+/* ---- 启动 ---- */
+function renderAll(){
+  renderToday(); setupWeekSel(); renderQuote();
+  window.__items = {};
+  POOL.forEach(p=>{ window.__items[p.tx] = null; });
+  loadMarket();
+  fetchNews();
+  document.getElementById("refreshMkt").addEventListener("click", ()=>loadMarket());
+  document.getElementById("refreshNews").addEventListener("click", e=>{ e.stopPropagation(); fetchNews(); });
+  document.getElementById("newsCard").addEventListener("click", openNewsSheet);
+  document.getElementById("newsMore").addEventListener("click", e=>{ e.stopPropagation(); openNewsSheet(); });
+  document.getElementById("newsClose").addEventListener("click", closeNewsSheet);
+  document.getElementById("readerBack").addEventListener("click", closeNewsReader);
+  document.getElementById("newsMask").addEventListener("click", e=>{
+    if(e.target.id === "newsMask") closeNewsSheet();
+  });
+}
+function fitGroups(){
+  document.querySelectorAll(".mkt-scroll").forEach(sc=>{
+    const w = sc.clientWidth - 8;
+    sc.querySelectorAll(".mkt-group").forEach(g=>{ g.style.width = w + "px"; });
+  });
+}
+window.addEventListener("resize", ()=>{ clearTimeout(gTimer); gTimer = setTimeout(fitGroups, 150); });
+let gTimer = 0;
+renderAll();
+</script>
+</body>
+</html>
