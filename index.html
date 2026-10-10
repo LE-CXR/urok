@@ -63,6 +63,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .plan-chip:active{transform:scale(.95)}
 .plan-chip.small{font-size:12.5px;padding:6px 12px}
 .plan-chip.xsmall{font-size:12px;padding:5px 10px}
+.plan-subrow{display:flex;align-items:center;justify-content:space-between;margin:0 0 7px}
+.plan-subrow .plan-sub{margin:0}
+.plan-etoggle{border:none;background:none;color:var(--accent);font-size:12.5px;font-weight:700;cursor:pointer;padding:2px 4px}
+.plan-etoggle.on{color:var(--sub)}
+.chip-wrap{position:relative;display:inline-flex}
+.chip-x{position:absolute;top:-6px;right:-5px;width:18px;height:18px;border-radius:50%;border:2px solid var(--card);background:#e05a5a;color:#fff;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.plan-chip.addchip{border-style:dashed;color:var(--sub)}
+.chip-edit{display:inline-flex;gap:6px;align-items:center}
+.chip-edit input{border:1px solid var(--accent);border-radius:20px;padding:8px 12px;font-size:13.5px;background:var(--card);color:var(--ink);width:132px}
 .plan-prog{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .plan-prog-txt{font-size:12.5px;color:var(--sub);flex:none}
 .plan-prog-txt b{color:var(--accent);font-size:14px}
@@ -440,9 +449,14 @@ function currentWeekWeekday(){
   return {week:w, weekday: d===0?7:d};
 }
 const PLAN_KEY = "planV1";
-const PLAN_HIST = "planHistV1";
-function readHist(){ try{ const a = JSON.parse(localStorage.getItem(PLAN_HIST) || "[]"); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
-function pushHist(text){ text = String(text||"").trim(); if(!text) return; let a = readHist().filter(function(x){ return x!==text; }); a.unshift(text); a = a.slice(0,12); try{ localStorage.setItem(PLAN_HIST, JSON.stringify(a)); }catch(e){} }
+const CHIPS_KEY = "planChipsV1";
+const DEFAULT_CHIPS = ["🏋️ 健身 1 小时","📝 复盘 30 分钟","📚 学习 2 小时","🚶 户外快走 40 分钟","📖 阅读 45 分钟","😴 23:30 前睡觉"];
+let planEditMode = false;
+function chips(){ try{ const a = JSON.parse(localStorage.getItem(CHIPS_KEY)); if(Array.isArray(a)) return a; }catch(e){} const d = DEFAULT_CHIPS.slice(); try{ localStorage.setItem(CHIPS_KEY, JSON.stringify(d)); }catch(e){} return d; }
+function writeChips(a){ try{ localStorage.setItem(CHIPS_KEY, JSON.stringify(a)); }catch(e){} }
+function addChip(text){ text = String(text||"").trim(); if(!text) return; const a = chips().filter(function(x){ return x!==text; }); a.unshift(text); writeChips(a.slice(0,24)); }
+function delChip(text){ writeChips(chips().filter(function(x){ return x!==text; })); }
+function renameChip(oldT, newT){ newT = String(newT||"").trim(); if(!newT) return; const out = []; chips().forEach(function(x){ const v = (x===oldT ? newT : x); if(out.indexOf(v)<0) out.push(v); }); writeChips(out); }
 function readPlan(){ try{ const o = JSON.parse(localStorage.getItem(PLAN_KEY) || "{}"); return (o && typeof o==="object") ? o : {}; }catch(e){ return {}; } }
 function writePlan(o){ try{ localStorage.setItem(PLAN_KEY, JSON.stringify(o)); }catch(e){} }
 function todayKey(){ return fmtDate(new Date()); }
@@ -463,9 +477,19 @@ function progressHtml(plans){
   const pct = total ? Math.round(done/total*100) : 0;
   return '<div class="plan-prog"><span class="plan-prog-txt">今日计划 <b>'+done+'</b>/'+total+'</span><span class="plan-bar"><i style="width:'+pct+'%"></i></span></div>';
 }
-function histChipsHtml(sub){
-  const h = readHist(); if(!h.length) return "";
-  return '<div class="plan-sub">我的常用</div><div class="plan-chips">'+h.map(function(x){ return '<button class="plan-chip small" data-act="quick" data-text="'+esc2(x)+'">'+esc2(x)+'</button>'; }).join("")+'</div>';
+function chipsHtml(){
+  const a = chips();
+  return '<div class="plan-subrow"><span class="plan-sub">快捷添加</span>'
+   + '<button class="plan-etoggle'+(planEditMode?' on':'')+'" data-act="editchips">'+(planEditMode?'完成':'编辑')+'</button></div>'
+   + '<div class="plan-chips">'
+   + a.map(function(x){
+       return '<span class="chip-wrap">'
+        + '<button class="plan-chip" data-act="'+(planEditMode?'renchip':'quick')+'" data-text="'+esc2(x)+'">'+esc2(x)+'</button>'
+        + (planEditMode? '<button class="chip-x" data-act="delchip" data-text="'+esc2(x)+'" aria-label="删除">✕</button>' : '')
+        + '</span>';
+     }).join("")
+   + '<button class="plan-chip addchip" data-act="newchip">＋ 新建</button>'
+   + '</div>';
 }
 function planItemHtml(p){
   return '<div class="plan-item'+(p.done?' done':'')+'" data-pid="'+p.id+'">'
@@ -483,15 +507,14 @@ function gapHtml(g, plans){
    + (mine.length? '<div class="plan-list gap-list">'+mine.map(planItemHtml).join("")+'</div>' : "")
    + '</div>';
 }
-function noClassHtml(plans){
-  const ideas = [["🏋️","健身 1 小时"],["📝","复盘 30 分钟"],["📚","学习 2 小时"],["🚶","户外快走 40 分钟"],["📖","阅读 45 分钟"],["😴","23:30 前睡觉"]];
+function planBlockHtml(plans, noClass){
   const mine = plans.filter(function(p){ return !p.slot; });
-  return '<div class="plan-head">今日无课 · 今天怎么过</div>'
+  return (noClass ? '<div class="plan-head">今日无课 · 今天怎么过</div>' : '<div class="plan-head">今日计划</div>')
    + (plans.length? progressHtml(plans) : "")
-   + '<div class="plan-sub">快捷添加</div>'
-   + '<div class="plan-chips">'+ideas.map(function(x){ return '<button class="plan-chip" data-act="quick" data-text="'+esc2(x[1])+'">'+x[0]+' '+esc2(x[1])+'</button>'; }).join("")+'</div>'
-   + histChipsHtml()
-   + '<div class="plan-list">'+(mine.length? mine.map(planItemHtml).join("") : '<div class="empty" style="font-size:13px">还没有计划，点上面的建议，或“＋ 自定义”加一条。</div>')+'</div>'
+   + chipsHtml()
+   + (mine.length
+       ? '<div class="plan-list">'+mine.map(planItemHtml).join("")+'</div>'
+       : (noClass ? '<div class="empty" style="font-size:13px;margin-bottom:10px">还没有计划，点上面的快捷项，或“＋ 自定义”加一条。</div>' : ""))
    + '<button class="gap-add" data-act="add" data-slot="" style="margin-left:0">＋ 自定义</button>';
 }
 function renderToday(){
@@ -500,7 +523,7 @@ function renderToday(){
   const list = courses.filter(c=>c.weekday===weekday && inWeek(c, week)).sort((a,b)=>a.start.localeCompare(b.start));
   const box = document.getElementById("todayList");
   const plans = dayPlan();
-  if(!list.length){ box.innerHTML = noClassHtml(plans); return; }
+  if(!list.length){ box.innerHTML = planBlockHtml(plans, true); return; }
   const DAY_START = 8*60, DAY_END = 22*60;
   const items = [];
   let cursor = DAY_START;
@@ -511,13 +534,13 @@ function renderToday(){
     cursor = Math.max(cursor, en);
   });
   if(DAY_END - cursor >= 45) items.push({type:"gap", start:cursor, end:DAY_END, slot:m2hm(cursor)+"-"+m2hm(DAY_END)});
-  box.innerHTML = (plans.length? progressHtml(plans) : "") + items.map(it=> it.type==="course" ? courseHtml(it.c) : gapHtml(it, plans)).join("");
+  box.innerHTML = planBlockHtml(plans, false) + items.map(it=> it.type==="course" ? courseHtml(it.c) : gapHtml(it, plans)).join("");
 }
 function addPlan(slot, text){
   text = String(text||"").trim(); if(!text) return;
   const a = dayPlan();
   a.push({id: String(Date.now())+Math.random().toString(36).slice(2,6), slot: slot||"", text: text, done:false});
-  setDayPlan(a); pushHist(text); renderToday();
+  setDayPlan(a); addChip(text); renderToday();
 }
 function celebrate(rect){
   const cols = ["#ff5a62","#21d68e","#f0a13c","#7c9bff","#ffd166","#c15f3c"];
@@ -556,7 +579,7 @@ function openInlineAdd(btn){
   const wrap = document.createElement("div");
   wrap.className = "plan-edit";
   wrap.innerHTML = '<div class="plan-edit-row"><input type="text" placeholder="写点什么…" maxlength="40"><button class="plan-ok" data-commit="1">✓</button></div>'
-    + (readHist().length ? '<div class="plan-chips">'+readHist().map(function(x){ return '<button class="plan-chip xsmall" data-pick="'+esc2(x)+'">'+esc2(x)+'</button>'; }).join("")+'</div>' : "");
+    + (chips().length ? '<div class="plan-chips">'+chips().map(function(x){ return '<button class="plan-chip xsmall" data-pick="'+esc2(x)+'">'+esc2(x)+'</button>'; }).join("")+'</div>' : "");
   btn.replaceWith(wrap);
   const inp = wrap.querySelector("input"); inp.focus();
   const commit = function(){ const v = inp.value.trim(); if(v) addPlan(slot, v); else renderToday(); };
@@ -586,6 +609,31 @@ function onPlanClick(e){
   }
   if(act==="quick"){ addPlan("", b.dataset.text); return; }
   if(act==="add"){ openInlineAdd(b); return; }
+  if(act==="editchips"){ planEditMode = !planEditMode; renderToday(); return; }
+  if(act==="delchip"){ delChip(b.dataset.text); renderToday(); return; }
+  if(act==="renchip"){ openChipRename(b); return; }
+  if(act==="newchip"){ openChipNew(b); return; }
+}
+function openChipRename(btn){
+  const oldT = btn.dataset.text || "";
+  const wrap = document.createElement("span");
+  wrap.className = "chip-edit";
+  wrap.innerHTML = '<input type="text" maxlength="24"><button class="plan-ok" data-commit="1">✓</button>';
+  btn.replaceWith(wrap);
+  const inp = wrap.querySelector("input"); inp.value = oldT; inp.focus(); inp.select();
+  const commit = function(){ const v = inp.value.trim(); if(v && v!==oldT) renameChip(oldT, v); renderToday(); };
+  wrap.querySelector("[data-commit]").addEventListener("click", commit);
+  inp.addEventListener("keydown", function(ev){ if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderToday(); });
+}
+function openChipNew(btn){
+  const wrap = document.createElement("span");
+  wrap.className = "chip-edit";
+  wrap.innerHTML = '<input type="text" placeholder="新计划项…" maxlength="24"><button class="plan-ok" data-commit="1">✓</button>';
+  btn.replaceWith(wrap);
+  const inp = wrap.querySelector("input"); inp.focus();
+  const commit = function(){ const v = inp.value.trim(); if(v) addChip(v); renderToday(); };
+  wrap.querySelector("[data-commit]").addEventListener("click", commit);
+  inp.addEventListener("keydown", function(ev){ if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderToday(); });
 }
 function renderWeekGrid(week){
   const grid = document.getElementById("weekGrid");
