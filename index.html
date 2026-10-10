@@ -45,6 +45,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .t-name{font-weight:600;font-size:15.5px;color:var(--ink);margin-top:2px}
 .t-line{font-size:13.5px;color:var(--sub);margin-top:2px}
 .t-flag{flex:none;align-self:center;width:8px;height:44px;border-radius:4px}
+.today-gap{margin:2px 0;border:1px dashed var(--todayb);background:var(--today);border-radius:12px;padding:9px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+.gap-badge{flex:none;font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:6px;padding:2px 7px}
+.gap-time{font-size:14px;font-weight:800;color:var(--accent)}
+.gap-len{font-size:12.5px;color:var(--sub)}
+.gap-tip{font-size:12px;color:var(--sub)}
+.gap-add{flex:none;margin-left:auto;border:none;background:var(--accent);color:#fff;border-radius:20px;padding:5px 13px;font-size:13px;font-weight:600;cursor:pointer}
+.plan-head{font-size:14px;font-weight:700;margin:4px 0 10px;display:flex;align-items:center;gap:7px}
+.plan-head::before{content:"";width:4px;height:15px;border-radius:2px;background:var(--accent);flex:none}
+.plan-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.plan-chip{border:1px solid var(--line);background:var(--card2);color:var(--ink);border-radius:20px;padding:7px 13px;font-size:13.5px;cursor:pointer}
+.plan-chip:hover{border-color:var(--accent)}
+.plan-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.plan-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card2);font-size:14px}
+.plan-item.done .plan-text{text-decoration:line-through;color:var(--sub)}
+.plan-check{flex:none;width:22px;height:22px;border-radius:50%;border:1.6px solid var(--accent);background:none;color:#fff;font-size:12px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.plan-item.done .plan-check{background:var(--accent)}
+.plan-slot{flex:none;font-size:12px;font-weight:700;color:var(--accent)}
+.plan-text{flex:1;min-width:0}
+.plan-del{flex:none;border:none;background:none;color:var(--sub);font-size:14px;cursor:pointer}
+.plan-inline{display:inline-flex;gap:6px;align-items:center;margin-left:auto}
+.plan-inline input{border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13.5px;background:var(--card);color:var(--ink);width:150px}
+.plan-ok{border:none;background:var(--accent);color:#fff;border-radius:8px;padding:6px 11px;font-size:13px;cursor:pointer}
+html.dark .today-gap{background:#2b2620}
 .empty{color:var(--sub);font-size:14px;padding:8px 0}
 /* 周视图 */
 .week-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
@@ -396,25 +419,88 @@ function currentWeekWeekday(){
   const d = now.getDay();
   return {week:w, weekday: d===0?7:d};
 }
+const PLAN_KEY = "planV1";
+function readPlan(){ try{ const o = JSON.parse(localStorage.getItem(PLAN_KEY) || "{}"); return (o && typeof o==="object") ? o : {}; }catch(e){ return {}; } }
+function writePlan(o){ try{ localStorage.setItem(PLAN_KEY, JSON.stringify(o)); }catch(e){} }
+function todayKey(){ return fmtDate(new Date()); }
+function dayPlan(){ const o=readPlan(); const k=todayKey(); if(!Array.isArray(o[k])) o[k]=[]; return o[k]; }
+function setDayPlan(a){ const o=readPlan(); o[todayKey()]=a; writePlan(o); }
+function hm2m(t){ const p=String(t||"0:0").split(":"); return (+p[0]||0)*60+(+p[1]||0); }
+function m2hm(m){ m=Math.max(0,Math.round(m)); return pad(Math.floor(m/60))+":"+pad(m%60); }
+function durTxt(m){ const h=Math.floor(m/60), r=m%60; return (h?h+"小时":"")+(r?r+"分":"") || "0分"; }
+function esc2(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function courseHtml(c){
+  return '<div class="t-item"><span class="t-flag" style="background:'+colorOf(c)+'"></span>'
+   + '<div class="t-time"><div class="range">'+c.start+' - '+c.end+'</div><div class="slot">'+c.start+' 开始</div></div>'
+   + '<div class="t-body"><div class="t-loc">'+esc2(c.loc)+'</div><div class="t-name">'+esc2(c.name)+'</div>'
+   + '<div class="t-line">'+esc2(c.teacher)+' · '+c.weeks+'周</div></div></div>';
+}
+function planItemHtml(p){
+  return '<div class="plan-item'+(p.done?' done':'')+'" data-pid="'+p.id+'">'
+   + '<button class="plan-check" data-act="toggle">'+(p.done?'✓':'')+'</button>'
+   + (p.slot?'<span class="plan-slot">'+esc2(p.slot)+'</span>':'')
+   + '<span class="plan-text">'+esc2(p.text)+'</span>'
+   + '<button class="plan-del" data-act="del">✕</button></div>';
+}
+function gapHtml(g, plans){
+  const mine = plans.filter(p=>p.slot===g.slot);
+  return '<div class="today-gap"><span class="gap-badge">空档</span>'
+   + '<span class="gap-time">'+m2hm(g.start)+' – '+m2hm(g.end)+'</span>'
+   + '<span class="gap-len">'+durTxt(g.end-g.start)+'</span>'
+   + '<span class="gap-tip">可以挤出时间做点事</span>'
+   + mine.map(planItemHtml).join("")
+   + '<button class="gap-add" data-act="add" data-slot="'+g.slot+'">＋ 计划这段时间</button></div>';
+}
+function noClassHtml(plans){
+  const ideas = [["🏋️","健身 1 小时"],["📚","学习 / 作业 2 小时"],["🚶","户外走走 40 分"],["📖","阅读 45 分"],["📝","复盘 + 明日计划 20 分"],["😴","23:30 前上床"]];
+  const mine = plans.filter(p=>!p.slot);
+  return '<div class="plan-head">今日无课 · 今天怎么过</div>'
+   + '<div class="plan-chips">'+ideas.map(function(x){ return '<button class="plan-chip" data-act="quick" data-text="'+esc2(x[1])+'">'+x[0]+' '+esc2(x[1])+'</button>'; }).join("")+'</div>'
+   + '<div class="plan-list">'+(mine.length? mine.map(planItemHtml).join("") : '<div class="empty" style="font-size:13px">还没有计划，点上面的建议，或“＋ 自定义”加一条。</div>')+'</div>'
+   + '<button class="gap-add" data-act="add" data-slot="" style="margin-left:0">＋ 自定义</button>';
+}
 function renderToday(){
   const {week, weekday} = currentWeekWeekday();
   document.getElementById("todayMeta").textContent = "第 "+week+" 周";
   const list = courses.filter(c=>c.weekday===weekday && inWeek(c, week)).sort((a,b)=>a.start.localeCompare(b.start));
   const box = document.getElementById("todayList");
-  if(!list.length){ box.innerHTML = '<div class="empty">今天没有课，可以好好休息。</div>'; return; }
-  box.innerHTML = list.map(c=>`
-    <div class="t-item">
-      <span class="t-flag" style="background:${colorOf(c)}"></span>
-      <div class="t-time">
-        <div class="range">${c.start} - ${c.end}</div>
-        <div class="slot">${c.start} 开始</div>
-      </div>
-      <div class="t-body">
-        <div class="t-loc">${c.loc}</div>
-        <div class="t-name">${c.name}</div>
-        <div class="t-line">${c.teacher} · ${c.weeks}周</div>
-      </div>
-    </div>`).join("");
+  const plans = dayPlan();
+  if(!list.length){ box.innerHTML = noClassHtml(plans); return; }
+  const DAY_START = 8*60, DAY_END = 22*60;
+  const items = [];
+  let cursor = DAY_START;
+  list.forEach(c=>{
+    const st = hm2m(c.start), en = hm2m(c.end);
+    if(st - cursor >= 45) items.push({type:"gap", start:cursor, end:st, slot:m2hm(cursor)+"-"+m2hm(st)});
+    items.push({type:"course", c});
+    cursor = Math.max(cursor, en);
+  });
+  if(DAY_END - cursor >= 45) items.push({type:"gap", start:cursor, end:DAY_END, slot:m2hm(cursor)+"-"+m2hm(DAY_END)});
+  box.innerHTML = items.map(it=> it.type==="course" ? courseHtml(it.c) : gapHtml(it, plans)).join("");
+}
+function addPlan(slot, text){
+  text = String(text||"").trim(); if(!text) return;
+  const a = dayPlan();
+  a.push({id: String(Date.now())+Math.random().toString(36).slice(2,6), slot: slot||"", text: text, done:false});
+  setDayPlan(a); renderToday();
+}
+function onPlanClick(e){
+  const b = e.target.closest("button"); if(!b) return;
+  const act = b.dataset.act;
+  if(act==="del"){ const id=b.closest(".plan-item").dataset.pid; setDayPlan(dayPlan().filter(function(x){return x.id!==id;})); renderToday(); return; }
+  if(act==="toggle"){ const id=b.closest(".plan-item").dataset.pid; const a=dayPlan(); a.forEach(function(x){ if(x.id===id) x.done=!x.done; }); setDayPlan(a); renderToday(); return; }
+  if(act==="quick"){ addPlan("", b.dataset.text); return; }
+  if(act==="add"){
+    const slot = b.dataset.slot || "";
+    const wrap = document.createElement("span");
+    wrap.className = "plan-inline";
+    wrap.innerHTML = '<input type="text" placeholder="写点什么…" maxlength="40"><button class="plan-ok">✓</button>';
+    b.replaceWith(wrap);
+    const inp = wrap.querySelector("input"); inp.focus();
+    const commit = function(){ const v = inp.value.trim(); if(v) addPlan(slot, v); else renderToday(); };
+    wrap.querySelector(".plan-ok").addEventListener("click", commit);
+    inp.addEventListener("keydown", function(ev){ if(ev.key==="Enter") commit(); if(ev.key==="Escape") renderToday(); });
+  }
 }
 function renderWeekGrid(week){
   const grid = document.getElementById("weekGrid");
@@ -1233,7 +1319,7 @@ function toast(msg){
 const NEWS_URL = "https://zhibo.sina.com.cn/api/zhibo/feed?page=1&page_size=60&zhibo_id=152&tag_id=0&callback=";
 let newsRendered = false;
 let newsStore = [];
-const NEWS_CATS = [["all","全部"],["fin","财经"],["dom","国内"],["intl","国际"],["mil","军事"],["ent","娱乐"],["spo","体育"]];
+const NEWS_CATS = [["all","全部"],["fin","财经"],["macro","宏观"],["corp","公司"],["intl","国际"],["spo","体育"],["ent","娱乐"]];
 let newsCat = "all";
 const NEWS_HOT = ["美联储","加息","降息","央行","LPR","MLF","降准","国务院","证监会","财政部","商务部","国家统计局","全会","政治局","十五五","政府工作报告","关税","CPI","PPI","GDP","汇率","美元","人民币","利率","通胀","外汇","专项债","特别国债","房地产","楼市","金价","油价","原油","黄金","A股","港股","外资","北向","救市","入市","中长期资金","芯片","半导体","人工智能","机器人","新能源","光伏","锂电","汽车","出口","进口","贸易","谈判","峰会","访华","访美","出访","会见","签署","合作","协议","经济","增长","产业"];
 const NEWS_MIL = ["军事","美军","国防","军演","演习","航母","战机","导弹","解放军","俄军","台海","南海","边境","核武","军工","部队","朝鲜","乌克兰","俄罗斯","伊朗","中东","印太","部署","武器","军舰","外交部","国防部","制裁","冲突","战争","局势","警告","大使馆","同盟","北约"];
@@ -1361,7 +1447,7 @@ function fetchSinaNews(){
   document.head.appendChild(s);
 }
 function fetchHotNews(){
-  const chs = [["dom","2510","国内"],["intl","2511","国际"],["mil","2514","军事"],["ent","2513","娱乐"],["spo","2512","体育"]];
+  const chs = [["spo","2512","体育"],["ent","2513","娱乐"]];
   let pending = chs.length;
   const results = [];
   chs.forEach(pair=>{
@@ -1419,37 +1505,43 @@ function addNews(items){
   renderNews();
   writeNewsCache(newsStore);
 }
+function emLoad(col){
+  return new Promise(function(resolve){
+    try{ delete window.ajax; }catch(e){}
+    const s = document.createElement("script");
+    s.referrerPolicy = "no-referrer";
+    s.src = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_" + col + "_ajax_50_1_.html";
+    let done = false;
+    const finish = ()=>{
+      if(done) return; done = true;
+      const raw = (window.ajax && window.ajax.LivesList) || [];
+      try{ delete window.ajax; }catch(e){}
+      try{ s.remove(); }catch(e){}
+      resolve(raw);
+    };
+    s.onload = finish;
+    s.onerror = finish;
+    setTimeout(finish, 8000);
+    document.head.appendChild(s);
+  });
+}
 function fetchEMNews(){
-  const s = document.createElement("script");
-  s.referrerPolicy = "no-referrer";
-  s.src = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_102_ajax_50_1_.html";
-  let done = false;
-  const finish = ()=>{ if(done) return; done = true; try{ delete window.ajax; }catch(e){} s.remove(); };
-  s.onload = ()=>{
-    try{
-      const raw = (window.ajax || {}).LivesList || [];
+  const cols = [["fin","102"],["macro","107"],["corp","103"],["intl","112"]];
+  (async function(){
+    for(let i=0;i<cols.length;i++){
+      const raw = await emLoad(cols[i][1]);
       const items = raw.map(it=>({
         t: it.title || "",
         tag: it.simtype_zh || "快讯",
         time: it.showtime || it.ordertime || "",
         url: (it.url_w || it.url_m || "").replace(/^http:/, "https:"),
-        full: (it.digest || "").trim() || ""
-      })).filter(i=>i.t && i.url)
-        .map(i=>({...i, s: NEWS_HOT.reduce((n,k)=>i.t.includes(k)?n+1:n, 0) + NEWS_MIL.reduce((n,k)=>i.t.includes(k)?n+2:n, 0)}))
-        .sort((a,b)=>b.s - a.s || b.time.localeCompare(a.time))
-        .slice(0, 30)
-        .map(i=>({t:i.t, tag:i.tag, time:i.time, url:i.url, full:i.full, cat:"fin"}));
-      if(items.length){
-        newsRendered = true;
-        addNews(items);
-      }
-      else if(!newsRendered) failNews();
-    }catch(e){ if(!newsRendered) failNews(); }
-    finish();
-  };
-  s.onerror = ()=>{ if(!newsRendered) failNews(); finish(); };
-  setTimeout(()=>{ if(!done){ failNews(); finish(); } }, 5000);
-  document.head.appendChild(s);
+        full: (it.digest || "").trim() || "",
+        cat: cols[i][0]
+      })).filter(i=>i.t && i.url).slice(0, 40);
+      if(items.length){ newsRendered = true; addNews(items); }
+    }
+    if(!newsRendered) failNews();
+  })();
 }
 function failNews(){
   const cache = readNewsCache();
@@ -1483,6 +1575,7 @@ function renderAll(){
     const b = e.target.closest(".cat-btn"); if(!b) return;
     newsCat = b.dataset.cat; renderNews();
   });
+  document.getElementById("todayList").addEventListener("click", onPlanClick);
   document.getElementById("newsCard").addEventListener("click", openNewsSheet);
   document.getElementById("newsMore").addEventListener("click", e=>{ e.stopPropagation(); openNewsSheet(); });
   document.getElementById("newsClose").addEventListener("click", closeNewsSheet);
