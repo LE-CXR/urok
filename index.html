@@ -77,8 +77,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .plan-item.done .plan-done{background:var(--accent);border-color:var(--accent);color:#fff}
 .plan-done.pop{animation:pop .42s cubic-bezier(.2,1.5,.35,1)}
 @keyframes pop{0%{transform:scale(.72)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
-.plan-del{flex:none;width:26px;height:26px;border:none;background:none;color:var(--sub);font-size:13px;cursor:pointer;opacity:.7}
-.plan-del:hover{opacity:1}
+.plan-del{flex:none;width:26px;height:26px;border:none;background:none;color:var(--sub);font-size:13px;cursor:pointer;opacity:.22;transition:opacity .15s}
+.plan-del:hover{opacity:.85}
+.plan-item.done .plan-del{opacity:.5}
 .plan-edit{margin:0;display:flex;flex-direction:column;gap:8px}
 .plan-edit-row{display:flex;gap:6px;align-items:center}
 .plan-edit input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;background:var(--card);color:var(--ink)}
@@ -469,7 +470,7 @@ function histChipsHtml(sub){
 function planItemHtml(p){
   return '<div class="plan-item'+(p.done?' done':'')+'" data-pid="'+p.id+'">'
    + '<span class="plan-text">'+esc2(p.text)+'</span>'
-   + (p.done?'<button class="plan-del" data-act="del" aria-label="删除">✕</button>':'')
+   + '<button class="plan-del" data-act="del" aria-label="删除">✕</button>'
    + '<button class="plan-done" data-act="toggle" aria-label="完成"><span class="tick">✓</span></button></div>';
 }
 function gapHtml(g, plans){
