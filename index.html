@@ -267,6 +267,33 @@ html.dark .reader-frame{background:#1a1917}
   .news-sheet{width:38.2vw;max-width:none;max-height:100vh;height:100vh;border-radius:22px 0 0 22px;border:1px solid var(--line);border-right:none;animation:slideright .3s cubic-bezier(.2,.9,.3,1.05);box-shadow:-24px 0 60px -20px rgba(0,0,0,.3)}
 }
 @keyframes slideright{from{transform:translateX(100%)}to{transform:none}}
+
+/* ===== 云同步 ===== */
+.cs-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card2);color:var(--ink);
+  border-radius:20px;padding:9px 16px;font-size:13.5px;cursor:pointer;font-family:inherit;transition:transform .12s ease}
+.cs-btn:active{transform:scale(.97)}
+.cs-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.cs-foot{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 0 30px}
+.cs-sheet{width:100%;max-width:560px;background:var(--card);border-radius:22px 22px 0 0;padding:12px 20px 26px;
+  border-top:1px solid var(--line);max-height:88vh;overflow:auto}
+.cs-head{display:flex;align-items:center;gap:8px;margin:8px 0 4px}
+.cs-dot{width:8px;height:8px;border-radius:50%;background:var(--dash);flex:none;transition:background .25s ease}
+.cs-dot.on{background:var(--accent)}
+.cs-dot.busy{background:#e0a83c}
+.cs-dot.err{background:#e05a5a}
+.cs-title{font-size:15px;font-weight:700}
+.cs-state{font-size:12.5px;color:var(--sub);margin-left:auto}
+.cs-state.on{color:var(--accent)}
+.cs-state.err{color:#e05a5a}
+.cs-note{font-size:13px;color:var(--sub);line-height:1.6;margin:2px 0 12px}
+.cs-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.cs-row[hidden]{display:none}
+.cs-row input{flex:1 1 130px;min-width:120px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
+  border-radius:12px;padding:10px 12px;font-size:14px;letter-spacing:1.5px;text-align:center;font-family:inherit}
+.cs-msg{font-size:13px;color:var(--accent);min-height:1.2em}
+.cs-msg.err{color:#e05a5a}
+.cs-ver{font-size:10px;color:var(--sub);opacity:.45;text-align:center;margin-top:14px}
+
 </style>
 </head>
 <body>
@@ -325,6 +352,8 @@ html.dark .reader-frame{background:#1a1917}
     <div class="week-grid" id="weekGrid"></div>
   </div>
 </section>
+
+<div class="cs-foot"><button class="cs-btn" id="csOpen">&#8645; 跨设备同步</button></div>
 </div>
 
 <!-- ===== 新闻速递底部弹层 ===== -->
@@ -376,6 +405,29 @@ html.dark .reader-frame{background:#1a1917}
   </div>
 </div>
 
+<div class="sheet-mask" id="csMask" hidden>
+  <div class="cs-sheet">
+    <div class="sheet-bar"></div>
+    <div class="sheet-head">
+      <div class="sheet-title">跨设备同步</div>
+      <button class="sheet-close" id="csClose">&#10005;</button>
+    </div>
+    <div class="cs-head"><span class="cs-dot" id="csDot"></span><span class="cs-title">云同步</span><span class="cs-state" id="csState">未开启</span></div>
+    <p class="cs-note" id="csNote">开启后，手机改完 iPad 自动显示，和液态玻璃版共用同一间房。</p>
+    <div class="cs-row" id="csSetup">
+      <input id="csRoom" placeholder="房间码" maxlength="10" autocapitalize="characters" autocomplete="off" spellcheck="false">
+      <button class="cs-btn primary" id="csCreate">创建房间</button>
+      <button class="cs-btn" id="csJoin">加入</button>
+    </div>
+    <div class="cs-row" id="csLive" hidden>
+      <button class="cs-btn primary" id="csNow">立即同步</button>
+      <button class="cs-btn" id="csLink">复制配对链接</button>
+      <button class="cs-btn" id="csOff">关闭</button>
+    </div>
+    <div class="cs-msg" id="csMsg"></div>
+    <div class="cs-ver">2026-10-11.1</div>
+  </div>
+</div>
 <div id="toast"></div>
 
 <script>
@@ -1721,6 +1773,239 @@ function fitGroups(){
 window.addEventListener("resize", ()=>{ clearTimeout(gTimer); gTimer = setTimeout(fitGroups, 150); });
 let gTimer = 0;
 renderAll();
+</script>
+<script>
+/* ===== 云同步：和液态玻璃版共用同一间房（planV1 / planChipsV1 格式一致） ===== */
+(function(){
+  var CLOUD_BASE = "https://unrivaled-sundae-d09e2c.netlify.app";
+  var DEFAULT_ROOM = "U1EYJ2IJOX";
+  var ROOM_KEY="cloudRoomV1", T_KEY="cloudTV1", DIRTY_KEY="cloudDirtyV1", LAST_KEY="cloudLastV1";
+  var EXTRA_KEY="cloudExtraV1";
+  var room="", localT=0, lastPushed="", dirty=false, busy=false, timer=null, poll=null;
+  var extra = {}; try{ extra = JSON.parse(localStorage.getItem(EXTRA_KEY) || "{}") || {}; }catch(e){ extra = {}; }
+  function saveExtra(){ try{ localStorage.setItem(EXTRA_KEY, JSON.stringify(extra)); }catch(e){} }
+  /* 老站不认识 fix/prev/bg，但必须原样带着走，不然会把玻璃版的设置从房间里抹掉 */
+  function keepExtra(o){
+    if(!o || typeof o !== "object") return;
+    var ch = false;
+    ["fix","prev","bg"].forEach(function(k){ if(o[k] !== undefined){ extra[k] = o[k]; ch = true; } });
+    if(ch) saveExtra();
+  }
+
+  function el(id){ return document.getElementById(id); }
+  function lsGet(k){ try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function readP(){ try{ var o=JSON.parse(localStorage.getItem("planV1")||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
+  function writeP(o){ try{ localStorage.setItem("planV1", JSON.stringify(o)); }catch(e){} }
+  function readC(){ try{ var a=JSON.parse(localStorage.getItem("planChipsV1")); if(Array.isArray(a)) return a; }catch(e){} return null; }
+  function writeC(a){ try{ localStorage.setItem("planChipsV1", JSON.stringify(a)); }catch(e){} }
+  function repaint(){ try{ if(typeof renderToday === "function") renderToday(); }catch(e){} }
+  function say(t){ try{ if(typeof toast === "function") toast(t); }catch(e){} }
+  function enc(s){ try{ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }catch(e){ return ""; } }
+  function dec(s){ try{ var t=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(t.length%4){ t+="="; } return decodeURIComponent(escape(atob(t))); }catch(e){ return ""; } }
+  function gather(){
+    var o={v:1,t:Date.now(),plan:readP()}; var c=readC(); if(c && c.length) o.chips=c;
+    ["fix","prev","bg"].forEach(function(k){ if(extra[k] !== undefined) o[k] = extra[k]; });
+    return o;
+  }
+  function mkCode(){ return "U1"+enc(JSON.stringify(gather())); }
+  function parse(c){ var s=String(c||""); if(s.indexOf("U1")===0) s=s.slice(2); var t=dec(s); if(!t) return null; try{ return JSON.parse(t); }catch(e){ return null; } }
+  function applyCode(c){
+    var o = parse(c); if(!o) return false;
+    keepExtra(o);
+    if(Array.isArray(o.chips) && o.chips.length) writeC(o.chips.map(String));
+    if(o.plan && typeof o.plan === "object"){
+      var p = readP();
+      Object.keys(o.plan).forEach(function(k){ if(Array.isArray(o.plan[k])) p[k]=o.plan[k]; });
+      writeP(p);
+    }
+    repaint();
+    return true;
+  }
+  function fmt(ts){ if(!ts) return "--"; var d=new Date(ts); function p(n){ return (n<10?"0":"")+n; }
+    return (d.getMonth()+1)+"/"+d.getDate()+" "+p(d.getHours())+":"+p(d.getMinutes()); }
+  function setState(txt, cls){
+    var s=el("csState"), d=el("csDot");
+    if(s){ s.textContent=txt; s.className="cs-state"+(cls?" "+cls:""); }
+    if(d){ d.className="cs-dot"+(cls?" "+cls:""); }
+  }
+  function note(t){ var n=el("csNote"); if(n) n.textContent=t; }
+  function msg(t, err){ var m=el("csMsg"); if(m){ m.textContent=t||""; m.className="cs-msg"+(err?" err":""); } }
+  function apiUrl(){ return CLOUD_BASE + "/api/sync"; }
+  function pull(){
+    return fetch(apiUrl()+"?room="+encodeURIComponent(room)+"&n="+Date.now(), {cache:"no-store"})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(function(j){ if(!j || !j.ok) throw new Error("bad"); return j; });
+  }
+  function send(p, beacon){
+    var body = JSON.stringify(p);
+    if(beacon && navigator.sendBeacon){
+      try{ return Promise.resolve(navigator.sendBeacon(apiUrl(), new Blob([body], {type:"application/json"}))); }catch(e){}
+    }
+    return fetch(apiUrl(), {method:"POST", cache:"no-store", headers:{"Content-Type":"application/json"}, body:body})
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); });
+  }
+  function mark(c, t){ lastPushed=c; localT=t; lsSet(LAST_KEY,c); lsSet(T_KEY,String(t)); lsSet(DIRTY_KEY,"0"); dirty=false; }
+  /* 推送前先拉一次：知道自己不认识的那些字段（背景/分类）当前是什么，才能原样带回去 */
+  function buildPush(remoteCode){
+    if(remoteCode) keepExtra(parse(remoteCode));
+    var c = mkCode(); if(!c) return Promise.resolve("none");
+    var t = Date.now();
+    return send({room:room, code:c, t:t}).then(function(j){
+      if(j && j.kept){ keepExtra(parse(j.code)); applyCode(j.code); mark(j.code, j.t||t); return "kept"; }
+      mark(c, t);
+      return "sent";
+    });
+  }
+  function pushNow(){
+    if(!room) return Promise.resolve("none");
+    return pull().then(function(j){ return buildPush(j && j.code); });
+  }
+  function cycle(silent){
+    if(!room || busy) return Promise.resolve("busy");
+    busy = true; setState("同步中…","busy");
+    return pull().then(function(j){
+      if(!j.code){ return buildPush(null).then(function(){ return "new"; }); }
+      keepExtra(parse(j.code));
+      var rt = j.t || 0;
+      if(dirty){ return buildPush(j.code).then(function(){ return "dirty"; }); }
+      if(rt > localT){ applyCode(j.code); mark(j.code, rt); return "got"; }
+      if(rt < localT){ return buildPush(j.code).then(function(){ return "sent"; }); }
+      lastPushed = j.code; return "same";
+    }).then(function(kind){
+      busy = false;
+      setState("已连接 · "+fmt(localT), "on");
+      if(!silent){
+        if(kind === "got"){ msg("已从另一台设备更新（"+fmt(localT)+"）"); say("已同步另一台设备的改动"); }
+        else if(kind === "same") msg("已是最新 · "+fmt(localT));
+        else msg("已上传本机内容（"+fmt(localT)+"）");
+      }
+      return kind;
+    }).catch(function(e){
+      busy = false; setState("云端未连接","err");
+      if(!silent) msg("云同步失败："+(e && e.message ? e.message : ("连接不上 " + CLOUD_BASE)), true);
+      return "err";
+    });
+  }
+  function schedule(){
+    if(!room) return;
+    clearTimeout(timer);
+    timer = setTimeout(function(){
+      if(busy) return;
+      var c = mkCode(); if(!c || c === lastPushed) return;
+      dirty = true; lsSet(DIRTY_KEY,"1");
+      pushNow().then(function(){
+        setState("已连接 · "+fmt(localT), "on");
+        msg("已自动上传 "+fmt(localT));
+      }).catch(function(){ setState("待上传","err"); msg("改动已存在本机，联网后会自动上传", true); });
+    }, 1500);
+  }
+  function startPoll(){
+    stopPoll();
+    poll = setInterval(function(){
+      if(document.hidden || !room || busy) return;
+      var c = mkCode();
+      if(c && c !== lastPushed){ schedule(); return; }
+      cycle(true);
+    }, 20000);
+  }
+  function stopPoll(){ if(poll){ clearInterval(poll); poll=null; } }
+  function flush(){
+    if(!room) return;
+    var c = mkCode(); if(!c || c === lastPushed) return;
+    var t = Date.now();
+    send({room:room, code:c, t:t}, true); mark(c, t);
+  }
+  function newRoom(){
+    var a="ABCDEFGHJKLMNPQRSTUVWXYZ23456789", s="";
+    for(var i=0;i<6;i++) s += a.charAt(Math.floor(Math.random()*a.length));
+    return s;
+  }
+  function render(){
+    var setup=el("csSetup"), live=el("csLive"), ri=el("csRoom");
+    if(setup) setup.hidden = !!room;
+    if(live) live.hidden = !room;
+    if(room){
+      if(ri) ri.value = room;
+      setState("已连接 "+room,"on");
+      note("房间 "+room+"：手机和 iPad 都填这个码，任意一端改完，另一端 20 秒内自动更新。");
+    } else {
+      setState("未开启","");
+      note("开启后，手机改完 iPad 自动显示，和液态玻璃版共用同一间房。");
+    }
+  }
+  function join(r){
+    r = String(r||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10);
+    if(r.length < 4){ msg("房间码至少 4 位（字母或数字）", true); return; }
+    room = r; lsSet(ROOM_KEY, room);
+    localT = parseInt(lsGet(T_KEY)||"0", 10) || 0;
+    lastPushed = lsGet(LAST_KEY) || "";
+    dirty = lsGet(DIRTY_KEY) === "1";
+    render(); startPoll();
+    cycle(true).then(function(kind){
+      if(kind === "got"){ msg("已连接 "+room+"，已载入云端内容"); say("云同步已连接"); }
+      else if(kind === "same") msg("已连接 "+room+"，已是最新");
+      else if(kind === "err") msg("房间 "+room+" 已记住，但云端暂时连不上", true);
+      else msg("已连接 "+room+"，本机内容已上传");
+    });
+  }
+  function leave(){
+    room=""; lsSet(ROOM_KEY,""); lsSet(DIRTY_KEY,"0"); lastPushed=""; stopPoll();
+    render(); msg("已关闭云同步，本机内容保留");
+  }
+  function copyLink(){
+    var url = location.origin + location.pathname + "?room=" + room;
+    function done(){ msg("配对链接已复制，在另一台设备打开就自动连上"); }
+    function fb(){
+      try{ var ta=document.createElement("textarea"); ta.value=url;
+        ta.style.position="fixed"; ta.style.top="-1000px"; document.body.appendChild(ta); ta.select();
+        var ok=document.execCommand("copy"); ta.remove();
+        msg(ok ? "配对链接已复制，在另一台设备打开就自动连上" : url, !ok);
+      }catch(e){ msg(url, true); }
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, fb);
+    else fb();
+  }
+  function openSheet(){ var m=el("csMask"); if(!m) return; m.hidden=false; if(room) cycle(false); }
+  function closeSheet(){ var m=el("csMask"); if(m) m.hidden=true; }
+  function init(){
+    var o=el("csOpen"), m=el("csMask"); if(!o || !m) return;
+    o.addEventListener("click", openSheet);
+    var cb=el("csClose"), b1=el("csCreate"), b2=el("csJoin"), b3=el("csNow"), b4=el("csLink"), b5=el("csOff"), ri=el("csRoom");
+    if(cb) cb.addEventListener("click", closeSheet);
+    m.addEventListener("click", function(e){ if(e.target === m) closeSheet(); });
+    if(b1) b1.addEventListener("click", function(){
+      var r=newRoom(); if(ri) ri.value=r; join(r);
+      msg("房间已创建："+r+"　在另一台设备上填这个码，或点「复制配对链接」");
+    });
+    if(b2) b2.addEventListener("click", function(){ join(ri ? ri.value : ""); });
+    if(ri) ri.addEventListener("keydown", function(e){ if(e.key === "Enter") join(ri.value); });
+    if(b3) b3.addEventListener("click", function(){ cycle(false); });
+    if(b4) b4.addEventListener("click", copyLink);
+    if(b5) b5.addEventListener("click", leave);
+    ["click","input","change","keyup"].forEach(function(ev){
+      document.addEventListener(ev, function(e){
+        if(!room) return;
+        if(e && e.target && e.target.closest && e.target.closest("#csMask")) return;
+        schedule();
+      }, true);
+    });
+    document.addEventListener("visibilitychange", function(){
+      if(document.hidden) flush(); else if(room && !busy) cycle(true);
+    });
+    window.addEventListener("pagehide", flush);
+    if(ri) ri.value = DEFAULT_ROOM;
+    var q = String(location.search||"").match(/[?&]room=([A-Za-z0-9]+)/);
+    if(q && q[1]){ try{ history.replaceState(null,"",location.pathname); }catch(e){} join(q[1]); return; }
+    var saved = lsGet(ROOM_KEY);
+    if(saved){
+      room = saved; localT = parseInt(lsGet(T_KEY)||"0",10) || 0;
+      lastPushed = lsGet(LAST_KEY) || ""; dirty = lsGet(DIRTY_KEY) === "1";
+      render(); startPoll(); cycle(true);
+    } else render();
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+})();
 </script>
 </body>
 </html>
