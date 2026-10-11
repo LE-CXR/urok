@@ -481,7 +481,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.10</div>
+    <div class="cs-ver">2026-10-11.11</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2348,6 +2348,8 @@ renderAll();
     sheet.style.transition = "none";
     sheet.style.transform = "";
     mask.style.backgroundColor = "";
+    mask.style.webkitBackdropFilter = "";
+    mask.style.backdropFilter = "";
     mask.classList.remove("dragging");
     setTimeout(function(){ sheet.style.transition = ""; }, 40);
   }
@@ -2365,6 +2367,9 @@ renderAll();
     /* 只淡出遮罩颜色：整层 opacity 会把面板也一起变透明，看起来就是闪 */
     mask.style.transition = "background-color .26s ease";
     mask.style.backgroundColor = "rgba(20,19,17,0)";
+    /* 收起全程都别开模糊，否则滑完会再虚化一下 */
+    mask.style.webkitBackdropFilter = "none";
+    mask.style.backdropFilter = "none";
     var d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hidden");
     setTimeout(function(){
       d.set.call(mask, true);
