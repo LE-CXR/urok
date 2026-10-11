@@ -96,6 +96,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   box-shadow:0 -18px 50px -20px rgba(0,0,0,.45) !important; }
 .sheet-mask.dragging, .modal-mask.dragging, .ps-mask.dragging, .sync-mask.dragging, .cat-menu-mask.dragging{
   -webkit-backdrop-filter:none; backdrop-filter:none; }
+/* 面板内滚动不要带动背后页面 */
+.modal, .news-sheet, .cs-sheet, .ps-sheet, .sync-sheet, .cat-menu{ overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+/* 移动端面板打开动画（桌面端抽屉用 slideright，别覆盖） */
+@media(max-width:899px){
+  .modal, .cs-sheet, .ps-sheet{ animation:slideup .28s cubic-bezier(.2,.9,.3,1.05); }
+}
+
 
 .plan-addrow{display:flex;justify-content:center;margin:4px 0 0}
 .plan-addbtn{border:1px dashed var(--line);background:none;color:var(--sub);border-radius:20px;padding:8px 20px;font-size:13.5px;
@@ -474,7 +481,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.6</div>
+    <div class="cs-ver">2026-10-11.7</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -966,6 +973,7 @@ const TX_K = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
 const EM_TREND = "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=";
 const TX_USFQ = "https://web.ifzq.gtimg.cn/appstock/app/usfqkline/get?param=";
 const TX_USMIN = "https://web.ifzq.gtimg.cn/appstock/app/usMinute/query?code=";
+const TX_DAY = "https://web.ifzq.gtimg.cn/appstock/app/day/query?code=";
 
 /* ---- 精选股票池（74 支：美股 32 + A股 22 + 港股 16，按当日涨跌自动分组，涨跌各取前 20） ---- */
 const POOL = [
@@ -1495,6 +1503,62 @@ function setWeekTabVisible(show){
   const b = document.querySelector('#dlTabs button[data-r="5d"]');
   if(b) b.style.display = show ? "" : "none";
 }
+function secidOf(it){
+  if(it.em) return it.em;
+  const t = String(it.tx || "");
+  if(t.indexOf("sh") === 0) return "1." + t.slice(2);
+  if(t.indexOf("sz") === 0) return "0." + t.slice(2);
+  if(t.indexOf("hk") === 0) return "116." + t.slice(2);
+  if(t.indexOf("us") === 0) return "105." + t.slice(2);
+  return "";
+}
+/* 1周视图：东方财富 5 日分时（A股约 1200 点、美股约 1950 点），比 5 根日K细得多 */
+async function loadWeek(it){
+  if(it.week && it.week.length) return it.week.length;
+  const t = String(it.tx || "");
+  /* A股 / 港股：腾讯 5 日分时（每天 240 个点） */
+  if(t.indexOf("sh") === 0 || t.indexOf("sz") === 0 || t.indexOf("hk") === 0){
+    try{
+      const j = await withRetry(()=>fetchJSON(TX_DAY + t), 2, 400);
+      const node = j && j.data && j.data[t] && j.data[t].data;
+      if(Array.isArray(node) && node.length){
+        const arr = [];
+        node.forEach(function(day){
+          const d = String(day && day.date || "");
+          const lst = (day && day.data) || [];
+          lst.forEach(function(s){
+            const p = String(s).split(" ");
+            const v = +p[1];
+            if(isFinite(v) && v > 0){
+              arr.push({t: d.slice(4,6) + "-" + d.slice(6,8) + " " + p[0].slice(0,2) + ":" + p[0].slice(2,4), v: v});
+            }
+          });
+        });
+        if(arr.length > 60){ it.week = arr; it.fbw = "5日分时"; return arr.length; }
+      }
+    }catch(e){}
+  }
+  /* 美股：东方财富 5 日分时 */
+  const sid = secidOf(it);
+  if(sid){
+    try{
+      const j = await withRetry(()=>fetchJSON(EM_TREND + sid + "&fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&ndays=5&iscr=0"), 2, 400);
+      const arr = j && j.data && j.data.trends;
+      if(arr && arr.length > 20){
+        it.week = arr.map(s=>{ const p = String(s).split(","); return {t: p[0].slice(5,16), v: +p[2]}; })
+                    .filter(x=>isFinite(x.v) && x.v > 0);
+        it.fbw = "5日分时";
+        return it.week.length;
+      }
+    }catch(e){}
+  }
+  /* 都失败：退回 5 根日K */
+  if(!it.kp || !it.kp[5]){ try{ await loadK(it, 5); }catch(e){} }
+  it.week = (it.kp && it.kp[5]) || [];
+  it.fbw = "近5日";
+  return it.week.length;
+}
+
 function switchTab(){
   document.querySelectorAll("#dlTabs button").forEach(b=>b.classList.toggle("on", b.dataset.r===detailRange));
   const chart = document.getElementById("dlChart");
@@ -1511,11 +1575,14 @@ function switchTab(){
     } else if(detailRange === "ytd"){
       if(!it.kp || !it.kp.ytd){ await loadK(it, 0, true); }
       pts = it.kp && it.kp.ytd;
-    } else {
-      const n = detailRange==="5d"?5 : detailRange==="1mo"?22 : detailRange==="3mo"?66 : 130;
-      if(!it.kp || !it.kp[n]){ await loadK(it, n); }
-      pts = it.kp && it.kp[n];
-    }
+    } else if(detailRange === "5d"){
+  await loadWeek(it);
+  pts = it.week;
+  fb = it.fbw || "";
+  } else {
+  const n = detailRange==="1mo"?22 : detailRange==="3mo"?66 : 130;
+  if(!it.kp || !it.kp[n]){ await loadK(it, n); }
+  pts = it.kp && it.kp[n];}
     const chg = document.getElementById("dlChg");
     const tc = themeColors();
     if(!pts || pts.length < 3){
@@ -2283,11 +2350,54 @@ renderAll();
     mask.classList.remove("dragging");
     setTimeout(function(){ sheet.style.transition = ""; }, 40);
   }
+  function syncLock(){
+    var list = document.querySelectorAll(SEL), any = false;
+    for(var i=0;i<list.length;i++){ if(!list[i].hidden){ any = true; break; } }
+    if(document.body) document.body.classList.toggle("lock-scroll", any);
+  }
+  function animateOut(mask, sheet){
+    mask.__closing = true;
+    var vert = (getComputedStyle(mask).alignItems === "flex-end");
+    sheet.style.transition = "transform .3s cubic-bezier(.32,.72,0,1)";
+    sheet.style.transform = vert ? "translateY(104%)" : "translateX(104%)";
+    mask.style.transition = "opacity .26s ease";
+    mask.style.opacity = "0";
+    var d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hidden");
+    setTimeout(function(){
+      d.set.call(mask, true);
+      reset(mask, sheet);
+      mask.style.opacity = "";
+      mask.style.transition = "";
+      mask.__closing = false;
+      syncLock();
+    }, 280);
+  }
+  /* 关面板时先播动画再真正隐藏：所有面板（包括点遮罩、点✕）都走这里 */
+  function guard(mask, sheet){
+    if(mask.__iosGuard) return;
+    var d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hidden");
+    if(!d || !d.set) return;
+    mask.__iosGuard = true;
+    Object.defineProperty(mask, "hidden", {
+      configurable: true,
+      get: function(){ return d.get.call(mask); },
+      set: function(v){
+        if(v === true && !d.get.call(mask)){
+          if(!mask.__closing) animateOut(mask, sheet);
+          return;
+        }
+        d.set.call(mask, v);
+        syncLock();
+      }
+    });
+  }
   function setup(mask){
     if(mask.__iosDrag) return;
     var sheet = firstChild(mask);
     if(!sheet) return;
     mask.__iosDrag = true;
+    guard(mask, sheet);
+    syncLock();
     var on = false, vert = true, x0 = 0, y0 = 0, dx = 0, dy = 0, t0 = 0, W = 1, H = 1, moved = false;
 
     function begin(cx, cy, target, handle){
@@ -2297,8 +2407,7 @@ renderAll();
       vert = (getComputedStyle(mask).alignItems === "flex-end");
       if(!handle){
         var nearTop = vert ? (cy - r.top <= 96) : (cx - r.left <= 104);
-        var nearBottom = vert ? (r.bottom - cy <= 140) : false;
-        if(!nearTop && !nearBottom) return false;
+        if(!nearTop) return false;
       }
       on = true; moved = false;
       x0 = cx; y0 = cy; dx = 0; dy = 0; t0 = Date.now();
@@ -2372,7 +2481,14 @@ renderAll();
   if(window.MutationObserver){
     new MutationObserver(function(){ scan(); }).observe(document.body, {childList:true, subtree:false});
   }
+  if(window.MutationObserver){
+    var mo = new MutationObserver(function(){ syncLock(); });
+    document.querySelectorAll(SEL).forEach(function(m){
+      mo.observe(m, {attributes:true, attributeFilter:["hidden"]});
+    });
+  }
   window.__iosSheets = {refresh: scan};
+
 })();
 </script>
 </body>
