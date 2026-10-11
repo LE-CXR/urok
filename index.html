@@ -308,6 +308,10 @@ html.dark .sheet-mask{background:rgba(0,0,0,.62)}
 .sheet-sub{padding:5px 20px 10px;font-size:12.5px;color:var(--sub)}
 .sheet-list{flex:1;min-height:0;overflow-y:auto;padding:2px 20px 24px;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y}
 .sheet-cats{display:flex;gap:6px;padding:0 20px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch;flex:none}
+.sheet-list.pg-l{animation:newsSlideL .26s cubic-bezier(.22,.9,.28,1)}
+.sheet-list.pg-r{animation:newsSlideR .26s cubic-bezier(.22,.9,.28,1)}
+@keyframes newsSlideL{from{opacity:.3;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes newsSlideR{from{opacity:.3;transform:translateX(-22px)}to{opacity:1;transform:none}}
 .cat-btn{flex:none;border:1px solid var(--line);background:var(--card2);color:var(--sub);font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;cursor:pointer;white-space:nowrap}
 .cat-btn b{font-weight:600;font-size:11.5px;margin-left:4px;opacity:.8}
 .cat-btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -490,7 +494,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.17</div>
+    <div class="cs-ver">2026-10-12.18</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1789,6 +1793,15 @@ function renderNews(){
   }
   const show = newsCat==="all" ? list : list.filter(function(i){ return i.cat===newsCat; });
   document.getElementById("newsList").innerHTML = show.length ? show.map(i=>newsItemHtml(i, true)).join("") : '<div class="empty">该分类暂无内容</div>';
+  /* 换分类（点标签或左右滑）：列表回到顶部，当前标签滚进可视范围 */
+  if(renderNews.__cat !== newsCat){
+    renderNews.__cat = newsCat;
+    const nl = document.getElementById("newsList"); if(nl) nl.scrollTop = 0;
+    if(catsEl){
+      const onb = catsEl.querySelector(".cat-btn.on");
+      if(onb) catsEl.scrollLeft = Math.max(0, onb.offsetLeft - (catsEl.clientWidth - onb.offsetWidth) / 2);
+    }
+  }
   document.getElementById("sheetMeta").textContent = "数据时间 " + fmtDate(now) + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + " ｜ 点击条目打开原网站";
   document.querySelectorAll(".news-item").forEach(el=>{
     el.addEventListener("click", ()=>{
@@ -2495,6 +2508,8 @@ function closePanel(){ if(mask) mask.hidden = true; }
       dx = cx - x0; dy = cy - y0;
       var d = vert ? dy : dx;
       if(!moved){
+        /* 横向为主的滑动（左右滑新闻分类、滑横向列表）交给页面自己处理，别把面板拖着走 */
+        if(vert && Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy) * 1.2){ on = false; return false; }
         if(d < -8){ on = false; return false; }
         if(Math.abs(d) < 3) return false;
         if(blocked || (!handle && scrolledDeep(tgt, mask, !vert))){ on = false; return false; }
@@ -2572,6 +2587,49 @@ function closePanel(){ if(mask) mask.hidden = true; }
   }
   window.__iosSheets = {refresh: scan};
 
+})();
+</script>
+<script>
+/* ===== 新闻速递：在列表上左右滑 = 切换分类（和点标签等价） ===== */
+(function(){
+  var list = document.getElementById("newsList");
+  if(!list) return;
+  var x0 = 0, y0 = 0, dx = 0, on = false, axis = "";
+  function idx(){
+    for(var i=0;i<NEWS_CATS.length;i++){ if(NEWS_CATS[i][0] === newsCat) return i; }
+    return -1;
+  }
+  function go(dir){
+    var i = idx(); if(i < 0) return;
+    var j = i + dir;
+    if(j < 0 || j >= NEWS_CATS.length) return;
+    newsCat = NEWS_CATS[j][0];
+    try{ renderNews(); }catch(e){ return; }
+    list.classList.remove("pg-l", "pg-r");
+    void list.offsetWidth;
+    list.classList.add(dir > 0 ? "pg-l" : "pg-r");
+    setTimeout(function(){ try{ list.classList.remove("pg-l", "pg-r"); }catch(e){} }, 300);
+  }
+  list.addEventListener("touchstart", function(e){
+    if(e.touches.length !== 1) return;
+    var t = e.touches[0];
+    x0 = t.clientX; y0 = t.clientY; dx = 0; axis = ""; on = true;
+  }, {passive:true});
+  list.addEventListener("touchmove", function(e){
+    if(!on) return;
+    var t = e.touches[0], ax = t.clientX - x0, ay = t.clientY - y0;
+    if(!axis && (Math.abs(ax) > 8 || Math.abs(ay) > 8)){
+      axis = (Math.abs(ax) > Math.abs(ay) * 1.2) ? "x" : "y";
+    }
+    if(axis === "x"){ dx = ax; if(e.cancelable) e.preventDefault(); }
+  }, {passive:false});
+  function fin(){
+    if(!on) return;
+    on = false;
+    if(axis === "x" && Math.abs(dx) > 55) go(dx < 0 ? 1 : -1);
+  }
+  list.addEventListener("touchend", fin, {passive:true});
+  list.addEventListener("touchcancel", function(){ on = false; }, {passive:true});
 })();
 </script>
 <script>
