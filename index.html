@@ -481,7 +481,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.9</div>
+    <div class="cs-ver">2026-10-11.10</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2362,13 +2362,13 @@ renderAll();
     var vert = (getComputedStyle(mask).alignItems === "flex-end");
     sheet.style.transition = "transform .3s cubic-bezier(.32,.72,0,1)";
     sheet.style.transform = vert ? "translateY(104%)" : "translateX(104%)";
-    mask.style.transition = "opacity .26s ease";
-    mask.style.opacity = "0";
+    /* 只淡出遮罩颜色：整层 opacity 会把面板也一起变透明，看起来就是闪 */
+    mask.style.transition = "background-color .26s ease";
+    mask.style.backgroundColor = "rgba(20,19,17,0)";
     var d = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "hidden");
     setTimeout(function(){
       d.set.call(mask, true);
       reset(mask, sheet);
-      mask.style.opacity = "";
       mask.style.transition = "";
       mask.__closing = false;
       syncLock();
