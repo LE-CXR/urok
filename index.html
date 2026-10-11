@@ -97,6 +97,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 @keyframes confetti{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.35);opacity:0}}
 html.dark .today-gap{background:#2b2620}
 html.dark .plan-item.done{background:#2b2620}
+.plan-chips.compact{gap:6px;margin:2px 0 0}
+.plan-chips.compact .plan-chip.small{padding:5px 11px;font-size:12.5px}
+.plan-chips.compact .chip-x{width:16px;height:16px;font-size:9px}
 .empty{color:var(--sub);font-size:14px;padding:8px 0}
 /* 周视图 */
 .week-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
@@ -425,7 +428,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.1</div>
+    <div class="cs-ver">2026-10-11.2</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -530,16 +533,16 @@ function progressHtml(plans){
 function chipsHtml(){
   const a = chips();
   return '<div class="plan-subrow">'
-   + '<button class="plan-etoggle'+(planEditMode?' on':'')+'" data-act="editchips">'+(planEditMode?'完成':'编辑')+'</button></div>'
-   + '<div class="plan-chips">'
-   + a.map(function(x){
-       return '<span class="chip-wrap">'
-        + '<button class="plan-chip" data-act="'+(planEditMode?'renchip':'quick')+'" data-text="'+esc2(x)+'">'+esc2(x)+'</button>'
-        + (planEditMode? '<button class="chip-x" data-act="delchip" data-text="'+esc2(x)+'" aria-label="删除">✕</button>' : '')
-        + '</span>';
-     }).join("")
-   + '<button class="plan-chip addchip" data-act="newchip">＋ 新建</button>'
-   + '</div>';
+  + '<button class="plan-etoggle'+(planEditMode?' on':'')+'" data-act="editchips">'+(planEditMode?'完成':'编辑')+'</button></div>'
+  + '<div class="plan-chips compact">'
+  + a.map(function(x){
+  return '<span class="chip-wrap">'
+  + '<button class="plan-chip small" data-act="'+(planEditMode?'renchip':'quick')+'" data-text="'+esc2(x)+'">'+esc2(x)+'</button>'
+  + (planEditMode? '<button class="chip-x" data-act="delchip" data-text="'+esc2(x)+'" aria-label="删除">✕</button>' : '')
+  + '</span>';
+  }).join("")
+  + '<button class="plan-chip small addchip" data-act="newchip">＋ 新建</button>'
+  + '</div>';
 }
 function planItemHtml(p){
   return '<div class="plan-item'+(p.done?' done':'')+'" data-pid="'+p.id+'">'
@@ -560,11 +563,11 @@ function gapHtml(g, plans){
 function planBlockHtml(plans, noClass){
   const mine = plans.filter(function(p){ return !p.slot; });
   return (noClass ? '<div class="plan-head">今日无课 · 今天怎么过</div>' : '<div class="plan-head">今日计划</div>')
-   + (plans.length? progressHtml(plans) : "")
-   + chipsHtml()
-   + (mine.length
-       ? '<div class="plan-list">'+mine.map(planItemHtml).join("")+'</div>'
-       : "");
+  + (plans.length? progressHtml(plans) : "")
+  + (mine.length
+  ? '<div class="plan-list">'+mine.map(planItemHtml).join("")+'</div>'
+  : "")
+  + chipsHtml();
 }
 function renderToday(){
   const {week, weekday} = currentWeekWeekday();
