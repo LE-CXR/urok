@@ -481,7 +481,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.8</div>
+    <div class="cs-ver">2026-10-11.9</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2357,6 +2357,7 @@ renderAll();
     if(document.body) document.body.classList.toggle("lock-scroll", any);
   }
   function animateOut(mask, sheet){
+    if(mask.__closing) return;
     mask.__closing = true;
     var vert = (getComputedStyle(mask).alignItems === "flex-end");
     sheet.style.transition = "transform .3s cubic-bezier(.32,.72,0,1)";
@@ -2444,8 +2445,8 @@ renderAll();
       mask.classList.remove("dragging");
       sheet.style.transition = "transform .28s cubic-bezier(.22,.9,.28,1)";
       if(out){
-        sheet.style.transform = vert ? "translateY(104%)" : "translateX(104%)";
-        setTimeout(function(){ closeIt(mask, sheet); reset(mask, sheet); }, 250);
+        closeIt(mask, sheet);
+        setTimeout(function(){ if(!mask.hidden) reset(mask, sheet); }, 420);
       } else {
         sheet.style.transform = "";
         setTimeout(function(){ mask.style.backgroundColor = ""; sheet.style.transition = ""; }, 300);
