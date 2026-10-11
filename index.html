@@ -490,7 +490,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.16</div>
+    <div class="cs-ver">2026-10-12.17</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -684,7 +684,7 @@ function addRowHtml(){
 }
 function planBlockHtml(plans, noClass, rest){
 const mine = rest || plans.filter(function(p){ return !p.slot; });
-return (noClass ? '<div class="plan-head">今日无课 · 今天怎么过</div>' : '<div class="plan-head">今日计划</div>')
+return (noClass ? '<div class="plan-head">今日无课 · 今天怎么过</div>' : '')
 + (plans.length? progressHtml(plans) : "")
 + (mine.length
 ? '<div class="plan-list">'+mine.map(planItemHtml).join("")+'</div>'
