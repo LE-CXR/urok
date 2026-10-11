@@ -428,7 +428,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.2</div>
+    <div class="cs-ver">2026-10-11.3</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -874,6 +874,7 @@ const TX_MIN = "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=";
 const TX_K = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
 const EM_TREND = "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=";
 const TX_USFQ = "https://web.ifzq.gtimg.cn/appstock/app/usfqkline/get?param=";
+const TX_USMIN = "https://web.ifzq.gtimg.cn/appstock/app/usMinute/query?code=";
 
 /* ---- 精选股票池（74 支：美股 32 + A股 22 + 港股 16，按当日涨跌自动分组，涨跌各取前 20） ---- */
 const POOL = [
@@ -1061,6 +1062,19 @@ function loadMinute(item){
   item._p = (async()=>{
     try{
       if(item.em){
+        /* 美股分时：优先腾讯 usMinute（一天 390+ 点、CORS 开放、与 A 股同格式），失败再退东财 */
+        try{
+          const ju = await withRetry(()=>fetchJSON(TX_USMIN + item.tx), 2, 400);
+          const nu = ju && ju.data && ju.data[item.tx] && ju.data[item.tx].data;
+          const au = nu && nu.data;
+          if(au && au.length > 2 && String(au[0]).trim() !== "0"){
+            item.pts = au.map(s=>{ const p = String(s).split(" "); return {t: p[0].slice(0,2)+":"+p[0].slice(2,4), v:+p[1]}; });
+            item.ptDate = nu.date || "";
+            item.fb = "";
+          }
+        }catch(e){}
+        if(!item.pts){
+
         try{
           const j = await withRetry(()=>fetchEMJSONP(EM_TREND + item.em + "&fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58&ndays=1&iscr=0", 4000), 1, 0);
           const arr = j && j.data && j.data.trends;
@@ -1070,7 +1084,7 @@ function loadMinute(item){
             item.fb = "";
           }
         }catch(e){}
-      } else {
+      }} else {
         const j = await withRetry(()=>fetchJSON(TX_MIN + item.tx), 3, 500);
         const node = j && j.data && j.data[item.tx] && j.data[item.tx].data;
         const arr = node && node.data;
