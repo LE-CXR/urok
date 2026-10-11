@@ -96,6 +96,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
   box-shadow:0 -18px 50px -20px rgba(0,0,0,.45) !important; }
 .sheet-mask.dragging, .modal-mask.dragging, .ps-mask.dragging, .sync-mask.dragging, .cat-menu-mask.dragging{
   -webkit-backdrop-filter:none; backdrop-filter:none; }
+/* 键盘弹起时：面板高度跟着可见区域收缩 */
+@media(max-width:899px){
+  .modal-mask > .modal, .sheet-mask > .news-sheet, .sheet-mask > .cs-sheet,
+  .ps-mask > .ps-sheet, .sync-mask > .sync-sheet, .cat-menu-mask > .cat-menu{
+    max-height: min(85vh, calc(var(--vvh, 100vh) - 10px)) !important; }
+}
+
 /* 面板内滚动不要带动背后页面 */
 .modal, .news-sheet, .cs-sheet, .ps-sheet, .sync-sheet, .cat-menu{ overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
 /* 移动端面板打开动画（桌面端抽屉用 slideright，别覆盖） */
@@ -481,7 +488,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.11</div>
+    <div class="cs-ver">2026-10-11.12</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2497,6 +2504,47 @@ renderAll();
   }
   window.__iosSheets = {refresh: scan};
 
+})();
+</script>
+<script>
+/* ===== 键盘/可见区域变化时：面板跟着走，别被顶出屏幕 ===== */
+(function(){
+  var SEL = ".sheet-mask, .modal-mask, .ps-mask, .sync-mask, .cat-menu-mask";
+  function sync(){
+    var vv = window.visualViewport;
+    if(!vv) return;
+    var list = document.querySelectorAll(SEL);
+    for(var i=0;i<list.length;i++){
+      var m = list[i];
+      m.style.top = Math.round(vv.offsetTop) + "px";
+      m.style.left = Math.round(vv.offsetLeft) + "px";
+      m.style.right = "auto";
+      m.style.bottom = "auto";
+      m.style.width = Math.round(vv.width) + "px";
+      m.style.height = Math.round(vv.height) + "px";
+      m.style.setProperty("--vvh", Math.round(vv.height) + "px");
+    }
+  }
+  window.__vvSync = sync;
+  if(window.visualViewport){
+    window.visualViewport.addEventListener("resize", sync);
+    window.visualViewport.addEventListener("scroll", sync);
+  }
+  window.addEventListener("resize", sync);
+  window.addEventListener("orientationchange", function(){ sync(); setTimeout(sync, 300); });
+  /* 输入框获得焦点：把可见区对齐好，并让输入框自己滚进来（而不是让 iOS 平移整页） */
+  document.addEventListener("focusin", function(e){
+    var t = e.target;
+    if(!t || !t.tagName) return;
+    if(t.tagName !== "INPUT" && t.tagName !== "TEXTAREA") return;
+    sync();
+    setTimeout(sync, 80);
+    setTimeout(sync, 320);
+    setTimeout(function(){ try{ t.scrollIntoView({block:"nearest"}); }catch(err){} }, 360);
+    setTimeout(sync, 900);
+  }, true);
+  document.addEventListener("focusout", function(){ setTimeout(sync, 80); setTimeout(sync, 400); }, true);
+  setTimeout(sync, 200);
 })();
 </script>
 </body>
