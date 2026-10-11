@@ -71,13 +71,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .chip-x{position:absolute;top:-6px;right:-5px;width:18px;height:18px;border-radius:50%;border:2px solid var(--card);background:#e05a5a;color:#fff;font-size:10px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .plan-chip.addchip{border-style:dashed;color:var(--sub)}
 .chip-edit{display:inline-flex;gap:6px;align-items:center}
-.chip-edit input{border:1px solid var(--accent);border-radius:20px;padding:8px 12px;font-size:13.5px;background:var(--card);color:var(--ink);width:132px}
+.chip-edit input{border:1px solid var(--accent);border-radius:20px;padding:8px 12px;font-size:16px;background:var(--card);color:var(--ink);width:132px}
 .plan-prog{display:flex;align-items:center;gap:10px;margin:0 0 12px}
 .plan-prog-txt{font-size:12.5px;color:var(--sub);flex:none}
 .plan-prog-txt b{color:var(--accent);font-size:14px}
 .plan-bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;display:block}
 .plan-bar i{display:block;height:100%;background:var(--accent);border-radius:3px;transition:width .35s ease}
-.plan-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.plan-list{display:flex;flex-direction:column;gap:8px;margin-bottom:6px}
 .plan-item{display:flex;align-items:center;gap:8px;padding:11px 12px 11px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card2);font-size:14.5px;transition:background .2s,border-color .2s}
 .plan-item.done{background:var(--today);border-color:var(--todayb)}
 .plan-item.done .plan-text{color:var(--sub);text-decoration:line-through}
@@ -111,8 +111,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 }
 
 
-.plan-addrow{display:flex;justify-content:center;margin:4px 0 0}
-.plan-addbtn{border:1px dashed var(--line);background:none;color:var(--sub);border-radius:20px;padding:8px 20px;font-size:13.5px;
+.plan-addrow{display:flex;justify-content:center;margin:0 0 -6px}
+.plan-addbtn{border:1px dashed var(--line);background:none;color:var(--sub);border-radius:16px;padding:6px 15px;font-size:12.5px;
   cursor:pointer;font-family:inherit;transition:transform .12s}
 .plan-addbtn:active{transform:scale(.97)}
 .ps-mask{position:fixed;inset:0;background:rgba(20,19,17,.45);z-index:120;display:flex;align-items:flex-end;justify-content:center}
@@ -126,7 +126,7 @@ html.dark .ps-mask{background:rgba(0,0,0,.62)}
 .ps-close{margin-left:auto;border:none;background:var(--badge);width:30px;height:30px;border-radius:50%;font-size:15px;color:var(--sub);cursor:pointer}
 .ps-row{display:flex;gap:8px;margin-bottom:14px}
 .ps-input{flex:1;min-width:0;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:12px;padding:10px 12px;
-  font-size:14px;font-family:inherit}
+  font-size:16px;font-family:inherit}
 .ps-ok{flex:none;border:none;background:var(--accent);color:#fff;border-radius:12px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer}
 .ps-sub{display:flex;align-items:center;margin-bottom:9px}
 .ps-subtxt{font-size:12.5px;color:var(--sub)}
@@ -140,7 +140,7 @@ html.dark .ps-mask{background:rgba(0,0,0,.62)}
 .ps-x{position:absolute;top:-6px;right:-5px;width:18px;height:18px;border-radius:50%;border:2px solid var(--card);background:#e05a5a;
   color:#fff;font-size:10px;line-height:1;cursor:pointer}
 .ps-edit{display:inline-flex;gap:6px;align-items:center}
-.ps-edit input{border:1px solid var(--accent);border-radius:20px;padding:9px 12px;font-size:13.5px;background:var(--card);
+.ps-edit input{border:1px solid var(--accent);border-radius:20px;padding:9px 12px;font-size:16px;background:var(--card);
   color:var(--ink);width:150px;font-family:inherit}
 .ps-edit button{border:none;background:var(--accent);color:#fff;border-radius:20px;padding:9px 14px;font-size:13.5px;font-weight:700;cursor:pointer}
 
@@ -151,7 +151,7 @@ html.dark .ps-mask{background:rgba(0,0,0,.62)}
 .plan-item.done .plan-del{opacity:.5}
 .plan-edit{margin:0;display:flex;flex-direction:column;gap:8px}
 .plan-edit-row{display:flex;gap:6px;align-items:center}
-.plan-edit input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:14px;background:var(--card);color:var(--ink)}
+.plan-edit input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:16px;background:var(--card);color:var(--ink)}
 .plan-ok{flex:none;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:9px 15px;font-size:14px;font-weight:700;cursor:pointer}
 .confetti{position:fixed;width:7px;height:7px;border-radius:2px;pointer-events:none;z-index:200;will-change:transform,opacity;animation:confetti .8s cubic-bezier(.2,.75,.3,1) forwards}
 @keyframes confetti{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.35);opacity:0}}
@@ -164,7 +164,7 @@ html.dark .plan-item.done{background:#2b2620}
 /* 周视图 */
 .week-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .week-toolbar label{font-size:14px;color:var(--sub)}
-.week-toolbar select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:var(--card);color:var(--ink)}
+.week-toolbar select{padding:6px 10px;border:1px solid var(--line);border-radius:8px;font-size:16px;background:var(--card);color:var(--ink)}
 .week-toolbar .badge{font-size:13px;color:var(--brand-dark);background:var(--badge);border-radius:20px;padding:3px 10px}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .week-grid{display:grid;grid-template-columns:repeat(7,minmax(128px,1fr));gap:8px;min-width:900px}
@@ -352,7 +352,7 @@ html.dark .reader-frame{background:#1a1917}
 .cs-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .cs-row[hidden]{display:none}
 .cs-row input{flex:1 1 130px;min-width:120px;border:1px solid var(--line);background:var(--bg);color:var(--ink);
-  border-radius:12px;padding:10px 12px;font-size:14px;letter-spacing:1.5px;text-align:center;font-family:inherit}
+  border-radius:12px;padding:10px 12px;font-size:16px;letter-spacing:1.5px;text-align:center;font-family:inherit}
 .cs-msg{font-size:13px;color:var(--accent);min-height:1.2em}
 .cs-msg.err{color:#e05a5a}
 .cs-ver{font-size:10px;color:var(--sub);opacity:.45;text-align:center;margin-top:14px}
@@ -488,7 +488,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.12</div>
+    <div class="cs-ver">2026-10-11.13</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2216,23 +2216,18 @@ renderAll();
     sheet.appendChild(el("div","ps-bar"));
     var head = el("div","ps-head");
     head.appendChild(el("div","ps-title","添加计划"));
-    var close = el("button","ps-close","✕"); close.id="psClose";
-    head.appendChild(close); sheet.appendChild(head);
+    sheet.appendChild(head);
     var row = el("div","ps-row");
     inputEl = el("input","ps-input"); inputEl.id="psInput";
-    inputEl.setAttribute("placeholder","想做什么？例如 背单词 30 分钟");
-    var ok = el("button","ps-ok","添加"); ok.id="psAdd";
-    row.appendChild(inputEl); row.appendChild(ok); sheet.appendChild(row);
+    inputEl.setAttribute("placeholder","想做什么？打完按回车就加进今天");
+    row.appendChild(inputEl); sheet.appendChild(row);
     var sub = el("div","ps-sub");
-    sub.appendChild(el("span","ps-subtxt","常用 · 点一下就加进今天"));
     mgrBtn = el("button","ps-mgr","管理"); mgrBtn.id="psMgr";
     sub.appendChild(mgrBtn); sheet.appendChild(sub);
     listEl = el("div","ps-chips"); listEl.id="psChips";
     sheet.appendChild(listEl);
     mask.appendChild(sheet); document.body.appendChild(mask);
-    close.addEventListener("click", closePanel);
     mask.addEventListener("click", function(e){ if(e.target===mask) closePanel(); });
-    ok.addEventListener("click", addCustom);
     inputEl.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); addCustom(); } });
     mgrBtn.addEventListener("click", function(){ editMode=!editMode; mgrBtn.textContent = editMode?"完成":"管理"; renderChips(); });
     listEl.addEventListener("click", onChip);
