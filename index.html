@@ -88,6 +88,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 @keyframes pop{0%{transform:scale(.72)}55%{transform:scale(1.22)}100%{transform:scale(1)}}
 .plan-del{flex:none;width:26px;height:26px;border:none;background:none;color:var(--sub);font-size:13px;cursor:pointer;opacity:.22;transition:opacity .15s}
 .plan-del:hover{opacity:.85}
+.plan-rep{flex:none;width:26px;height:26px;border:none;background:none;color:var(--sub);font-size:14px;cursor:pointer;opacity:.3;transition:opacity .15s,color .15s}
+.plan-rep:hover{opacity:.9}
+.plan-rep.on{color:var(--accent);opacity:1}
+.plan-replab{font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:0 5px;margin-left:6px;white-space:nowrap}
 .plan-item.done .plan-del{opacity:.5}
 .plan-edit{margin:0;display:flex;flex-direction:column;gap:8px}
 .plan-edit-row{display:flex;gap:6px;align-items:center}
@@ -428,7 +432,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.3</div>
+    <div class="cs-ver">2026-10-11.4</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -505,7 +509,7 @@ const PLAN_KEY = "planV1";
 const CHIPS_KEY = "planChipsV1";
 const DEFAULT_CHIPS = ["🏋️ 健身 1 小时","📝 复盘 30 分钟","📚 学习 2 小时","🚶 户外快走 40 分钟","📖 阅读 45 分钟","😴 23:30 前睡觉"];
 let planEditMode = false;
-function chips(){ try{ const a = JSON.parse(localStorage.getItem(CHIPS_KEY)); if(Array.isArray(a)) return a; }catch(e){} const d = DEFAULT_CHIPS.slice(); try{ localStorage.setItem(CHIPS_KEY, JSON.stringify(d)); }catch(e){} return d; }
+function chips(){ try{ const a = JSON.parse(localStorage.getItem(CHIPS_KEY)); if(Array.isArray(a)) return a; }catch(e){} return DEFAULT_CHIPS.slice(); }
 function writeChips(a){ try{ localStorage.setItem(CHIPS_KEY, JSON.stringify(a)); }catch(e){} }
 function addChip(text){ text = String(text||"").trim(); if(!text) return; const a = chips().filter(function(x){ return x!==text; }); a.unshift(text); writeChips(a.slice(0,24)); }
 function delChip(text){ writeChips(chips().filter(function(x){ return x!==text; })); }
@@ -513,7 +517,45 @@ function renameChip(oldT, newT){ newT = String(newT||"").trim(); if(!newT) retur
 function readPlan(){ try{ const o = JSON.parse(localStorage.getItem(PLAN_KEY) || "{}"); return (o && typeof o==="object") ? o : {}; }catch(e){ return {}; } }
 function writePlan(o){ try{ localStorage.setItem(PLAN_KEY, JSON.stringify(o)); }catch(e){} }
 function todayKey(){ return fmtDate(new Date()); }
-function dayPlan(){ const o=readPlan(); const k=todayKey(); if(!Array.isArray(o[k])) o[k]=[]; return o[k]; }
+function dayPlan(){ return seedRepeat(); }
+const REP_KEY = "planRepeatV1";
+function readRep(){ try{ const a = JSON.parse(localStorage.getItem(REP_KEY)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function writeRep(a){ try{ localStorage.setItem(REP_KEY, JSON.stringify(a)); }catch(e){} }
+function weekdayNum(){ const d = new Date().getDay(); return d === 0 ? 7 : d; }
+function repRule(id){ const a = readRep().filter(function(r){ return r && r.id === id; }); return a.length ? a[0] : null; }
+/* 记忆功能：某天第一次打开时，把「每周/每天重复」的计划自动填进当天，之后这天归你手动管 */
+function seedRepeat(){
+const o = readPlan(); const k = todayKey();
+if(Array.isArray(o[k])) return o[k];
+const wd = weekdayNum();
+const rules = readRep().filter(function(r){ return r && r.text && (r.mode === "d" || r.wd === wd); });
+if(!rules.length) return [];
+const list = rules.map(function(r){ return {id:"rp-"+r.id+"-"+k, slot:r.slot||"", text:r.text, done:false, rep:r.id}; });
+o[k] = list; writePlan(o);
+return list;
+}
+function toggleRep(btn){
+const id = btn.closest(".plan-item").dataset.pid;
+const a = dayPlan();
+const it = a.filter(function(x){ return x.id===id; })[0];
+if(!it) return;
+const rules = readRep();
+const cur = rules.filter(function(r){ return r.id===it.rep; })[0] || null;
+if(!cur){
+const rid = "r" + Date.now() + Math.random().toString(36).slice(2,6);
+rules.push({id:rid, text:it.text, slot:it.slot||"", wd:weekdayNum(), mode:"w"});
+it.rep = rid; writeRep(rules); setDayPlan(a); renderToday();
+toast("已记住：以后每周" + WEEKDAYS[weekdayNum()-1].slice(1) + "都会自动出现");
+return;
+}
+if(cur.mode === "w"){
+cur.mode = "d"; writeRep(rules); setDayPlan(a); renderToday();
+toast("已改成每天重复"); return;
+}
+it.rep = ""; writeRep(rules.filter(function(r){ return r.id!==cur.id; }));
+setDayPlan(a); renderToday();
+toast("已取消重复");
+}
 function setDayPlan(a){ const o=readPlan(); o[todayKey()]=a; writePlan(o); }
 function hm2m(t){ const p=String(t||"0:0").split(":"); return (+p[0]||0)*60+(+p[1]||0); }
 function m2hm(m){ m=Math.max(0,Math.round(m)); return pad(Math.floor(m/60))+":"+pad(m%60); }
@@ -545,10 +587,12 @@ function chipsHtml(){
   + '</div>';
 }
 function planItemHtml(p){
-  return '<div class="plan-item'+(p.done?' done':'')+'" data-pid="'+p.id+'">'
-   + '<span class="plan-text">'+esc2(p.text)+'</span>'
-   + '<button class="plan-del" data-act="del" aria-label="删除">✕</button>'
-   + '<button class="plan-done" data-act="toggle" aria-label="完成"><span class="tick">✓</span></button></div>';
+const rr = p.rep ? repRule(p.rep) : null;
+return '<div class="plan-item'+(p.done?' done':'')+'" data-pid="'+p.id+'">'
++ '<span class="plan-text">'+esc2(p.text)+(rr? '<span class="plan-replab">'+(rr.mode==="d"?"每天":"每周")+'</span>' : '')+'</span>'
++ '<button class="plan-rep'+(p.rep?' on':'')+'" data-act="rep" aria-label="重复">↻</button>'
++ '<button class="plan-del" data-act="del" aria-label="删除">✕</button>'
++ '<button class="plan-done" data-act="toggle" aria-label="完成"><span class="tick">✓</span></button></div>';
 }
 function gapHtml(g, plans){
   const mine = plans.filter(function(p){ return p.slot===g.slot; });
@@ -643,6 +687,7 @@ function onPlanClick(e){
   const b = e.target.closest("button"); if(!b) return;
   const act = b.dataset.act;
   if(act==="del"){ const id=b.closest(".plan-item").dataset.pid; setDayPlan(dayPlan().filter(function(x){ return x.id!==id; })); renderToday(); return; }
+if(act==="rep"){ toggleRep(b); return; }
   if(act==="toggle"){
     const id = b.closest(".plan-item").dataset.pid;
     const a = dayPlan(); let nowDone = false;
@@ -1815,13 +1860,23 @@ renderAll();
   function readP(){ try{ var o=JSON.parse(localStorage.getItem("planV1")||"{}"); return (o&&typeof o==="object")?o:{}; }catch(e){ return {}; } }
   function writeP(o){ try{ localStorage.setItem("planV1", JSON.stringify(o)); }catch(e){} }
   function readC(){ try{ var a=JSON.parse(localStorage.getItem("planChipsV1")); if(Array.isArray(a)) return a; }catch(e){} return null; }
+  function readRepC(){ try{ var a=JSON.parse(localStorage.getItem("planRepeatV1")||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function writeRepC(a){ try{ localStorage.setItem("planRepeatV1", JSON.stringify(a)); }catch(e){} }
+  var DEFCHIPS = (typeof DEFAULT_CHIPS !== "undefined" && DEFAULT_CHIPS.length) ? DEFAULT_CHIPS : [];
+  function isDefaultChips(a){
+    if(!Array.isArray(a) || !DEFCHIPS.length || a.length > DEFCHIPS.length) return false;
+    for(var i=0;i<a.length;i++){ if(DEFCHIPS.indexOf(a[i]) < 0) return false; }
+    return true;
+  }
   function writeC(a){ try{ localStorage.setItem("planChipsV1", JSON.stringify(a)); }catch(e){} }
   function repaint(){ try{ if(typeof renderToday === "function") renderToday(); }catch(e){} }
   function say(t){ try{ if(typeof toast === "function") toast(t); }catch(e){} }
   function enc(s){ try{ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""); }catch(e){ return ""; } }
-  function dec(s){ try{ var t=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(t.length%4){ t+="="; } return decodeURIComponent(escape(atob(t))); }catch(e){ return ""; } }
-  function gather(){
-    var o={v:1,t:Date.now(),plan:readP()}; var c=readC(); if(c && c.length) o.chips=c;
+  function dec(s){ try{ var t=String(s).replace(/-/g,"+").replace(/_/g,"/"); while(t.length%4){ t+="="; } return decodeURIComponent(escape(atob(t))); }catch(e){ return ""; } }  function gather(){
+    var o={v:1,t:Date.now(),plan:readP()};
+    var c=readC();
+    if(c && c.length && !isDefaultChips(c)) o.chips=c;
+    o.rep = readRepC();
     ["fix","prev","bg"].forEach(function(k){ if(extra[k] !== undefined) o[k] = extra[k]; });
     return o;
   }
@@ -1830,7 +1885,11 @@ renderAll();
   function applyCode(c){
     var o = parse(c); if(!o) return false;
     keepExtra(o);
-    if(Array.isArray(o.chips) && o.chips.length) writeC(o.chips.map(String));
+    if(Array.isArray(o.chips) && o.chips.length){
+      var curC = readC();
+      if(!(isDefaultChips(o.chips) && curC && curC.length && !isDefaultChips(curC))) writeC(o.chips.map(String));
+    }
+    if(Array.isArray(o.rep)) writeRepC(o.rep);
     if(o.plan && typeof o.plan === "object"){
       var p = readP();
       Object.keys(o.plan).forEach(function(k){ if(Array.isArray(o.plan[k])) p[k]=o.plan[k]; });
