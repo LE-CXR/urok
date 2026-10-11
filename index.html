@@ -113,9 +113,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 }
 
 
-.plan-addrow{display:flex;justify-content:center;margin:0 0 -6px}
-.plan-addbtn{border:1px dashed var(--line);background:none;color:var(--sub);border-radius:16px;padding:6px 15px;font-size:12.5px;
-  cursor:pointer;font-family:inherit;transition:transform .12s}
+.plan-addrow{display:flex;justify-content:center;margin:14px 0 2px}
+.plan-addbtn{border:1px dashed var(--line);background:none;color:var(--sub);border-radius:12px;padding:4px 11px;font-size:11.5px;
+  opacity:.85;cursor:pointer;font-family:inherit;transition:transform .12s}
 .plan-addbtn:active{transform:scale(.97)}
 .ps-mask{position:fixed;inset:0;background:rgba(20,19,17,.45);z-index:120;display:flex;align-items:flex-end;justify-content:center}
 .ps-mask[hidden]{display:none}
@@ -490,7 +490,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.15</div>
+    <div class="cs-ver">2026-10-12.16</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -688,8 +688,7 @@ return (noClass ? '<div class="plan-head">今日无课 · 今天怎么过</div>'
 + (plans.length? progressHtml(plans) : "")
 + (mine.length
 ? '<div class="plan-list">'+mine.map(planItemHtml).join("")+'</div>'
-: "")
-+ addRowHtml();
+: "");
 }
 function renderToday(){
 const {week, weekday} = currentWeekWeekday();
@@ -703,7 +702,7 @@ if(h2) h2.style.display = noClass ? "none" : "";
 mt.style.display = noClass ? "none" : "";
 const box = document.getElementById("todayList");
 const plans = dayPlan();
-if(!list.length){ box.innerHTML = planBlockHtml(plans, true, plans); return; }
+if(!list.length){ box.innerHTML = planBlockHtml(plans, true, plans) + addRowHtml(); return; }
 /* ——空档规则：只在两节课之间的空当给计划位——
    上课前那段不算（9 点上课，8 点的空当没意义）
    11:30–14:00 是吃饭午休，直接挖掉
@@ -739,7 +738,8 @@ box.innerHTML = planBlockHtml(plans, false, rest)
 + items.map(function(it){
 return it.type==="course" ? courseHtml(it.c)
 : gapHtml(it, plans.filter(function(p){ return inGapRange(p, it); }));
-}).join("");
+}).join("")
++ addRowHtml();
 }
 function addPlan(slot, text, remember){
 text = String(text||"").trim(); if(!text) return;
