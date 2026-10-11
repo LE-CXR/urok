@@ -488,7 +488,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-11.13</div>
+    <div class="cs-ver">2026-10-11.14</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -675,8 +675,14 @@ function planBlockHtml(plans, noClass){
 
 function renderToday(){
   const {week, weekday} = currentWeekWeekday();
-  document.getElementById("todayMeta").textContent = "第 "+week+" 周";
+  const mt = document.getElementById("todayMeta");
+  mt.textContent = "第 "+week+" 周";
   const list = courses.filter(c=>c.weekday===weekday && inWeek(c, week)).sort((a,b)=>a.start.localeCompare(b.start));
+  /* 一整天没课：把「今日课程」标题和第 N 周徽标一起收起来 */
+  const noClass = !list.length;
+  const h2 = document.querySelector("#todayCard h2");
+  if(h2) h2.style.display = noClass ? "none" : "";
+  mt.style.display = noClass ? "none" : "";
   const box = document.getElementById("todayList");
   const plans = dayPlan();
   if(!list.length){ box.innerHTML = planBlockHtml(plans, true); return; }
@@ -2217,10 +2223,6 @@ renderAll();
     var head = el("div","ps-head");
     head.appendChild(el("div","ps-title","添加计划"));
     sheet.appendChild(head);
-    var row = el("div","ps-row");
-    inputEl = el("input","ps-input"); inputEl.id="psInput";
-    inputEl.setAttribute("placeholder","想做什么？打完按回车就加进今天");
-    row.appendChild(inputEl); sheet.appendChild(row);
     var sub = el("div","ps-sub");
     mgrBtn = el("button","ps-mgr","管理"); mgrBtn.id="psMgr";
     sub.appendChild(mgrBtn); sheet.appendChild(sub);
@@ -2228,7 +2230,6 @@ renderAll();
     sheet.appendChild(listEl);
     mask.appendChild(sheet); document.body.appendChild(mask);
     mask.addEventListener("click", function(e){ if(e.target===mask) closePanel(); });
-    inputEl.addEventListener("keydown", function(e){ if(e.key==="Enter"){ e.preventDefault(); addCustom(); } });
     mgrBtn.addEventListener("click", function(){ editMode=!editMode; mgrBtn.textContent = editMode?"完成":"管理"; renderChips(); });
     listEl.addEventListener("click", onChip);
   }
@@ -2442,6 +2443,8 @@ renderAll();
       return true;
     }
     function end(){
+      document.body.style.webkitUserSelect = "";
+      document.body.style.userSelect = "";
       if(!on) return;
       on = false;
       if(!moved){ mask.classList.remove("dragging"); sheet.style.transition = ""; return; }
@@ -2473,7 +2476,10 @@ renderAll();
     sheet.addEventListener("touchcancel", end, {passive:true});
     sheet.addEventListener("mousedown", function(e){
       if(e.button !== 0) return;
-      if(begin(e.clientX, e.clientY, e.target, isHandle(e.target))) e.preventDefault();
+      if(!begin(e.clientX, e.clientY, e.target, isHandle(e.target))) return;
+      /* 这里绝不能 preventDefault：那会把「轻点输入框就聚焦」一起吞掉 */
+      document.body.style.webkitUserSelect = "none";
+      document.body.style.userSelect = "none";
     });
     window.addEventListener("mousemove", function(e){ if(on) move(e.clientX, e.clientY); });
     window.addEventListener("mouseup", function(){ if(on) end(); });
