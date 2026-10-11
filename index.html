@@ -2329,14 +2329,15 @@ renderAll();
     for(var i=0;i<mask.children.length;i++){ if(mask.children[i].nodeType === 1) return mask.children[i]; }
     return null;
   }
-  function scrolledDeep(node, stop){
+  function scrolledDeep(node, stop, horiz){
     var el = node;
     while(el && el !== stop){
-      if(el.scrollTop > 1) return true;
+      if(horiz ? (el.scrollLeft > 1) : (el.scrollTop > 1)) return true;
       el = el.parentNode;
     }
     return false;
   }
+
   function isHandle(t){ return !!(t && t.closest && t.closest(HANDLES)); }
   function closeIt(mask, sheet){
     var b = sheet.querySelector(CLOSERS);
@@ -2398,18 +2399,16 @@ renderAll();
     mask.__iosDrag = true;
     guard(mask, sheet);
     syncLock();
-    var on = false, vert = true, x0 = 0, y0 = 0, dx = 0, dy = 0, t0 = 0, W = 1, H = 1, moved = false;
+    var on = false, handle = false, blocked = false, tgt = null, vert = true;
+    var x0 = 0, y0 = 0, dx = 0, dy = 0, t0 = 0, W = 1, H = 1, moved = false;
 
-    function begin(cx, cy, target, handle){
+    function begin(cx, cy, target, isHandle){
       if(mask.hidden) return false;
-      if(!handle && scrolledDeep(target, mask)) return false;
       var r = sheet.getBoundingClientRect();
       vert = (getComputedStyle(mask).alignItems === "flex-end");
-      if(!handle){
-        var nearTop = vert ? (cy - r.top <= 96) : (cx - r.left <= 104);
-        if(!nearTop) return false;
-      }
-      on = true; moved = false;
+      on = true; moved = false; handle = !!isHandle; tgt = target;
+      /* 里层列表没滚到顶：这一下交给列表滚动，别抢 */
+      blocked = (!isHandle && scrolledDeep(target, mask, !vert));
       x0 = cx; y0 = cy; dx = 0; dy = 0; t0 = Date.now();
       W = r.width || 380; H = r.height || 520;
       sheet.style.transition = "none";
@@ -2422,6 +2421,7 @@ renderAll();
       if(!moved){
         if(d < -8){ on = false; return false; }
         if(Math.abs(d) < 3) return false;
+        if(blocked || (!handle && scrolledDeep(tgt, mask, !vert))){ on = false; return false; }
         moved = true;
         mask.classList.add("dragging");
       }
@@ -2470,6 +2470,8 @@ renderAll();
     window.addEventListener("mousemove", function(e){ if(on) move(e.clientX, e.clientY); });
     window.addEventListener("mouseup", function(){ if(on) end(); });
   }
+
+
   function scan(){
     var list = document.querySelectorAll(SEL);
     for(var i=0;i<list.length;i++) setup(list[i]);
