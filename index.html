@@ -257,6 +257,11 @@ html.dark .btn.ghost{background:#2c2a27;border-color:var(--line)}
 .mkt-logic .logic-hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .mkt-logic .logic-sub{font-size:11.5px;color:var(--sub);opacity:.85}
 .mkt-logic .logic-line{margin-top:4px}
+.mkt-logic .logic-toggle{margin-left:auto;background:none;border:none;font:inherit;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:3px;padding:2px 0}
+.mkt-logic .logic-toggle.on .logic-caret{transform:rotate(90deg)}
+.mkt-logic .logic-brief{margin-top:5px;cursor:pointer;font-size:12.5px;line-height:1.5}
+.mkt-logic .logic-brief:active{opacity:.75}
+.mkt-logic .logic-body{margin-top:2px}
 .mkt-logic .logic-topic{color:var(--accent)}
 .mkt-logic .logic-none{color:var(--sub);opacity:.85}
 .mkt-logic .logic-k{display:inline-block;min-width:30px;color:var(--sub);font-size:12px;margin-right:4px}
@@ -542,7 +547,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.21</div>
+    <div class="cs-ver">2026-10-12.22</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1128,7 +1133,9 @@ applyTheme();
    - 分时      web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股/指数）
    - 日K       web.ifzq.gtimg.cn/appstock/app/fqkline/get
    - 分钟K     ifzq.gtimg.cn/appstock/app/kline/mkline（A股实测直连；港股/美股不支持）
-   - 美股分时 / 分钟K  东方财富 push2his（时通时不通，仅兜底，失败后 30 分钟不再试）
+   - 5日分时    web.ifzq.gtimg.cn/appstock/app/day/query（A股/港股，每天约 240-330 个点）
+ - 美股分时 / 分钟K  东方财富 push2his（时通时不通，仅兜底，失败后 30 分钟不再试）；
+                    腾讯 usMinute 只给「最近一个交易日」→ 美股 1 周 = 前 4 天日K + 末日分时
    缓存：localStorage 兜底，断网时展示上次成功数据
 ========================================================= */
 const TX_Q = "https://qt.gtimg.cn/q=";
@@ -1729,11 +1736,44 @@ async function loadWeek(it){
       }
     }catch(e){ emMarkDead(); }
   }
+  /* 美股：腾讯不给美股分钟K，但「最近一个交易日」的分时能拿到 →
+     1 周拼成「前 4 天日K + 最后一天逐分钟」，末日是真实走势，不再是 5 根柱子 */
+  if(t.indexOf("us") === 0){
+    try{
+      if(!it.kp || !it.kp[5]){ await loadK(it, 5); }
+      const dk = (it.kp && it.kp[5]) || [];
+      const jm = await withRetry(()=>fetchJSON(TX_USMIN + t), 2, 400);
+      const node = jm && jm.data && jm.data[t] && jm.data[t].data;
+      const arr = node && node.data;
+      if(dk.length >= 4 && Array.isArray(arr) && arr.length > 30){
+        const mins = arr.map(s=>{ const p = String(s).split(" "); return {v: +p[1]}; })
+                       .filter(x=>isFinite(x.v) && x.v > 0);
+        if(mins.length > 30){
+          it.week = mixWeek(dk, mins);
+          it.fbw = "近5日 · 末日分时";
+          return it.week.length;
+        }
+      }
+    }catch(e){}
+  }
   /* 都失败：退回 5 根日K */
   if(!it.kp || !it.kp[5]){ try{ await loadK(it, 5); }catch(e){} }
   it.week = (it.kp && it.kp[5]) || [];
-  it.fbw = "近5日";
+  it.fbw = "近5日 · 日K（美股无分钟源）";
   return it.week.length;
+}
+
+/* 日K + 末日分时拼成一条周线：日K点各占 1 份宽度，末日分钟点合起来也占 1 份，
+   横轴才不会被末日撑满；点数压到 200 以内，保留日K点的高低影线 */
+function mixWeek(daily, minutes){
+  const days = daily.slice(0, Math.max(1, daily.length - 1));
+  const last = daily[daily.length - 1] || {};
+  const M = Math.max(120, 200 - days.length);
+  const mins = thin(minutes, M);
+  const per = 1 / mins.length;
+  const pts = days.map(p=>({t:p.t, v:p.v, h:p.h, l:p.l, w:1}));
+  mins.forEach((m, i)=>{ pts.push({t: (i === 0 || i === mins.length - 1) ? (last.t || "") : "", v:m.v, w:per}); });
+  return pts;
 }
 
 function ymdAgo(days){
@@ -1874,7 +1914,12 @@ function bigSVG(pts, color, range, fb){
   min -= pad; max += pad;
   const span = (max-min) || 1;
   const n = pts.length;
-  const px = i => padL + i/(n-1)*(w-padL-padR);
+  /* 横轴按权重铺开（默认每点等宽）：混了末日分时的那条线里，分钟点按比例分宽度 */
+  let wsum = 0;
+  pts.forEach(p=>{ wsum += (p && p.w) || 1; });
+  const xs = []; let acc = 0;
+  pts.forEach(p=>{ const ww = (p && p.w) || 1; xs.push(padL + (acc + ww/2)/wsum*(w-padL-padR)); acc += ww; });
+  const px = i => xs[i];
   const py = v => padT + (1-(v-min)/span)*(h-padT-padB);
   const line = pts.map((p,i)=>px(i).toFixed(1)+","+py(p.v).toFixed(1)).join(" ");
   const uid = "big" + (++sparkUid);
@@ -1891,8 +1936,26 @@ function bigSVG(pts, color, range, fb){
   for(let i=0;i<=3;i++) ticks.push({v: min + span*i/3, x: w-padR+4, y: py(min + span*i/3)});
   const tickHtml = ticks.map(t=>'<text x="'+t.x+'" y="'+(t.y+3)+'" font-size="10" fill="'+tc.axis+'">'+fmtPrice(t.v)+'</text>').join("");
   // X axis: first / 1-3 / 2-3 / last
-  const xi = n >= 12 ? [0, Math.round((n-1)/3), Math.round((n-1)*2/3), n-1] : [0, n-1];
-  const xHtml = xi.map(i=>'<text x="'+px(i)+'" y="'+(h-8)+'" text-anchor="'+(i===0?"start":i===n-1?"end":"middle")+'" font-size="10" fill="'+tc.axis+'">'+pts[i].t+'</text>').join("");
+  /* 横轴只标有日期的点；稀疏序列（如 5 根日K）仍然只标首尾 */
+  const labeled = []; pts.forEach((p,i)=>{ if(p && p.t) labeled.push(i); });
+  let xi = [];
+  if(labeled.length <= 6){
+    xi = labeled.length ? [labeled[0], labeled[labeled.length-1]] : [];
+  } else {
+    [0, 1/3, 2/3, 1].forEach(function(f){
+      const target = padL + f*(w-padL-padR);
+      let best = labeled[0], bd = Infinity;
+      labeled.forEach(function(i){ const d = Math.abs(px(i)-target); if(d < bd){ bd = d; best = i; } });
+      if(xi.indexOf(best) < 0) xi.push(best);
+    });
+    xi.sort((a,b)=>a-b);
+  }
+  const spanX = (w-padL-padR) || 1;
+  const xHtml = xi.map(i=>{
+    const left = px(i)-padL, right = (w-padR)-px(i);
+    const an = left < spanX*0.06 ? "start" : (right < spanX*0.06 ? "end" : "middle");
+    return '<text x="'+px(i).toFixed(1)+'" y="'+(h-8)+'" text-anchor="'+an+'" font-size="10" fill="'+tc.axis+'">'+pts[i].t+'</text>';
+  }).join("");
   return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">'
     + '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'
     + '<stop offset="0" stop-color="'+color+'" stop-opacity="0.22"/>'
@@ -2223,6 +2286,8 @@ function topicOf(item){
   var t = themesOf(item.pool.tx);
   return t.length ? t[0].n : "";
 }
+/* 摘要行里只写主打的那半条线：「新能源车 / 电池」→「新能源车」 */
+function shortTopic(n){ return String(n || "").split("/")[0].trim(); }
 /* 有「动作」的快讯才算线索：只说「某官员演讲提到人工智能」这种不构成涨跌原因 */
 var SIGNAL = ["涨停","跌停","大涨","大跌","重挫","跳水","回落","走高","走低","反弹","创新高","创新低",
   "业绩","预增","预减","净利","营收","订单","中标","签约","收购","并购","重组","停产","减产","扩产",
@@ -2432,11 +2497,23 @@ function renderLogic(){
       view = '涨跌都压在 <b>' + esc(upTop) + '</b> 这条线上，板块内部在分化，主要看个股自己的消息面。';
     }
   }
-  var html = '<div class="logic-hd"><b>今日逻辑</b><span class="logic-sub">'
-    + (news.length
-        ? "对照最近 60 小时 " + news.length + " 条快讯 · 池内 " + st.ups.length + " 涨 / " + st.downs.length + " 跌"
-        : "快讯还没到，先看板块联动")
-    + '</span></div>';
+  /* 收起时的一行摘要：大盘什么调子 · 领涨哪条线 · 领跌哪条线 */
+  var mood = idx.length
+    ? (upN === idx.length ? "全线走高" : upN === 0 ? "全线走低" : "涨跌分化")
+    : "指数还没到";
+  var upName = upTop || (st.ups[0] ? st.ups[0].pool.name : "");
+  var downName = downTop || (st.downs[0] ? st.downs[0].pool.name : "");
+  var brief = '<span class="logic-k">大盘</span>' + mood
+    + ' · <span class="logic-k">领涨</span><span style="color:' + tc.up + '">' + esc(upName ? shortTopic(upName) : "--") + '</span>'
+    + ' · <span class="logic-k">领跌</span><span style="color:' + tc.down + '">' + esc(downName ? shortTopic(downName) : "--") + '</span>';
+
+  var subTxt = news.length
+    ? "对照最近 60 小时 " + news.length + " 条快讯 · 池内 " + st.ups.length + " 涨 / " + st.downs.length + " 跌"
+    : "快讯还没到，先看板块联动";
+  var html = '<div class="logic-hd"><b>今日逻辑</b>'
+    + '<button class="logic-toggle" id="logicToggle"><span class="logic-caret">›</span> <span class="logic-tg-t">展开</span></button></div>';
+  html += '<div class="logic-brief" id="logicBrief">' + brief + '</div>';
+  html += '<div class="logic-body" id="logicBody" hidden><div class="logic-sub">' + subTxt + '</div>';
   html += '<div class="logic-line"><span class="logic-k">大盘</span>' + tone + '</div>';
   html += upLine + downLine;
   html += named.join("");
@@ -2450,8 +2527,26 @@ function renderLogic(){
         + (r.kind === "direct" ? "点名" : esc(r.th || "板块")) + '</span></button>';
     }).join("") + '</div>';
   }
-  html += '<div class="logic-foot">依据 = 快讯原文 + 同板块联动，不是定论；点标题看原文。</div>';
+  html += '<div class="logic-foot">依据 = 快讯原文 + 同板块联动，不是定论；点标题看原文。</div></div>';
   box.innerHTML = html;
+  /* 收起/展开：状态记住，下次进来还是上次那样 */
+  var body = document.getElementById("logicBody"), tg = document.getElementById("logicToggle"), bf = document.getElementById("logicBrief");
+  var open = false;
+  try{ open = localStorage.getItem("urokLogicOpen") === "1"; }catch(e){}
+  function setOpen(v){
+    if(!body) return;
+    body.hidden = !v;
+    if(tg){
+      tg.classList.toggle("on", v);
+      var lab = tg.querySelector(".logic-tg-t");
+      if(lab) lab.textContent = v ? "收起" : "展开";
+    }
+    try{ localStorage.setItem("urokLogicOpen", v ? "1" : "0"); }catch(e){}
+  }
+  setOpen(open);
+  [tg, bf].forEach(function(el){
+    if(el) el.addEventListener("click", function(){ setOpen(!!body && body.hidden); });
+  });
   var more = document.getElementById("logicMore"), qs = document.getElementById("logicQuotes");
   if(more && qs){
     more.addEventListener("click", function(){
