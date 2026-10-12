@@ -47,6 +47,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .t-flag{flex:none;align-self:center;width:8px;height:44px;border-radius:4px}
 .today-gap{margin:3px 0;border:1px dashed var(--todayb);background:var(--today);border-radius:12px;padding:4px 10px}
 .gap-row{display:flex;align-items:center;gap:6px;min-height:24px}
+
+/* 现在时间线（iOS 日历风）：一条橙线 + 左侧圆点 + 时间 */
+.now-line{display:flex;align-items:center;gap:8px;margin:2px 2px 6px}
+.now-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(218,119,86,.15)}
+.now-txt{flex:none;font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.2px;font-variant-numeric:tabular-nums}
+.now-rule{flex:1;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(218,119,86,.85),rgba(218,119,86,.10))}
+/* 正在上课 / 正在空档 */
+.t-item.is-now{border-color:var(--accent);box-shadow:0 0 0 1px rgba(218,119,86,.35),0 6px 18px -12px rgba(218,119,86,.6);background:linear-gradient(0deg,rgba(218,119,86,.06),rgba(218,119,86,.06)),var(--card2)}
+.t-item.is-now .t-flag{width:10px}
+.now-badge{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:12.5px;font-weight:800;color:var(--accent);white-space:nowrap}
+.now-badge i{flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);animation:nowPulse 1.7s ease-in-out infinite}
+@keyframes nowPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.7)}}
+@media (prefers-reduced-motion:reduce){.now-badge i{animation:none}}
+.today-gap.is-now{border-style:solid;border-color:var(--accent);background:rgba(218,119,86,.10)}
+.today-gap.is-now .gap-badge{background:var(--accent);color:#fff;border-color:var(--accent)}
+.today-gap.is-now .gap-tip{color:var(--accent);font-weight:800}
 .gap-badge{flex:none;font-size:10px;font-weight:700;color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:0 4px;line-height:13px;opacity:.9}
 .gap-time{flex:none;font-size:12px;font-weight:800;color:var(--accent);white-space:nowrap;letter-spacing:-.2px}
 .gap-len{flex:none;font-size:11.5px;color:var(--sub);white-space:nowrap}
@@ -158,6 +174,9 @@ html.dark .ps-mask{background:rgba(0,0,0,.62)}
 .confetti{position:fixed;width:7px;height:7px;border-radius:2px;pointer-events:none;z-index:200;will-change:transform,opacity;animation:confetti .8s cubic-bezier(.2,.75,.3,1) forwards}
 @keyframes confetti{0%{transform:translate(-50%,-50%) scale(1);opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.35);opacity:0}}
 html.dark .today-gap{background:#2b2620}
+html.dark .now-dot{box-shadow:0 0 0 4px rgba(218,119,86,.22)}
+html.dark .t-item.is-now{background:linear-gradient(0deg,rgba(218,119,86,.13),rgba(218,119,86,.13)),var(--card2)}
+html.dark .today-gap.is-now{background:rgba(218,119,86,.18)}
 html.dark .plan-item.done{background:#2b2620}
 .plan-chips.compact{gap:6px;margin:2px 0 0}
 .plan-chips.compact .plan-chip.small{padding:5px 11px;font-size:12.5px}
@@ -494,7 +513,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.18</div>
+    <div class="cs-ver">2026-10-12.19</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -623,9 +642,21 @@ function hm2m(t){ const p=String(t||"0:0").split(":"); return (+p[0]||0)*60+(+p[
 function m2hm(m){ m=Math.max(0,Math.round(m)); return pad(Math.floor(m/60))+":"+pad(m%60); }
 function durTxt(m){ const h=Math.floor(m/60), r=m%60; return (h?h+"小时":"")+(r?r+"分":"") || "0分"; }
 function esc2(x){ return String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
-function courseHtml(c){
-  return '<div class="t-item"><span class="t-flag" style="background:'+colorOf(c)+'"></span>'
-   + '<div class="t-time"><div class="range">'+c.start+' - '+c.end+'</div><div class="slot">'+c.start+' 开始</div></div>'
+function nowMin(){ const d = new Date(); return d.getHours()*60 + d.getMinutes(); }
+function leftTxt(m){
+  m = Math.max(0, Math.round(m));
+  const h = Math.floor(m/60), r = m%60;
+  if(h && r) return h+" 小时 "+r+" 分";
+  if(h) return h+" 小时";
+  return r+" 分";
+}
+function nowLineHtml(){ return '<div class="now-line"><span class="now-dot"></span><span class="now-txt">现在 '+m2hm(nowMin())+'</span><span class="now-rule"></span></div>'; }
+function courseHtml(c, isNow){
+  return '<div class="t-item'+(isNow?' is-now':'')+'"><span class="t-flag" style="background:'+colorOf(c)+'"></span>'
+   + '<div class="t-time"><div class="range">'+c.start+' - '+c.end+'</div>'
+   + (isNow ? '<div class="now-badge"><i></i>上课中 · 还剩 '+leftTxt(hm2m(c.end)-nowMin())+'</div>'
+            : '<div class="slot">'+c.start+' 开始</div>')
+   + '</div>'
    + '<div class="t-body"><div class="t-loc">'+esc2(c.loc)+'</div><div class="t-name">'+esc2(c.name)+'</div>'
    + '<div class="t-line">'+esc2(c.teacher)+' · '+c.weeks+'周</div></div></div>';
 }
@@ -673,15 +704,16 @@ else pool = ["放松一下","睡前别刷太久"];
 const i = (new Date().getDate()*7 + Math.round(start/30)*3 + Math.round(len/15)) % pool.length;
 return pool[i];
 }
-function gapHtml(g, plans){
+function gapHtml(g, plans, isNow){
 const mine = plans || [];
-return '<div class="today-gap"><div class="gap-row"><span class="gap-badge">空档</span>'
-+ '<span class="gap-time">'+m2hm(g.start)+' – '+m2hm(g.end)+'</span>'
-+ '<span class="gap-len">'+durTxt(g.end-g.start)+'</span>'
-+ '<span class="gap-tip">'+esc2(gapTip(g.start, g.end-g.start))+'</span>'
-+ '<button class="gap-add" data-act="add" data-slot="'+g.slot+'" data-label="'+m2hm(g.start)+' – '+m2hm(g.end)+'">＋ 计划</button></div>'
-+ (mine.length? '<div class="plan-list gap-list">'+mine.map(planItemHtml).join("")+'</div>' : "")
-+ '</div>';
+return '<div class="today-gap'+(isNow?' is-now':'')+'"><div class="gap-row"><span class="gap-badge">空档</span>'
+ + '<span class="gap-time">'+m2hm(g.start)+' – '+m2hm(g.end)+'</span>'
+ + (isNow ? "" : '<span class="gap-len">'+durTxt(g.end-g.start)+'</span>')
+ + (isNow ? '<span class="gap-tip">还剩 '+leftTxt(g.end-nowMin())+'</span>'
+          : '<span class="gap-tip">'+esc2(gapTip(g.start, g.end-g.start))+'</span>')
+ + '<button class="gap-add" data-act="add" data-slot="'+g.slot+'" data-label="'+m2hm(g.start)+' – '+m2hm(g.end)+'">＋ 计划</button></div>'
+ + (mine.length? '<div class="plan-list gap-list">'+mine.map(planItemHtml).join("")+'</div>' : "")
+ + '</div>';
 }
 function addRowHtml(){
   return '<div class="plan-addrow"><button class="plan-addbtn" data-act="openadd">＋ 添加计划</button></div>';
@@ -738,11 +770,22 @@ if(sg[1]-sg[0] >= MIN_GAP) items.push({type:"gap", start:sg[0], end:sg[1], slot:
 const gaps = items.filter(function(it){ return it.type==="gap"; });
 const inAnyGap = function(p){ return gaps.some(function(g){ return inGapRange(p, g); }); };
 const rest = plans.filter(function(p){ return !p.slot || !inAnyGap(p); });
+/* 现在时间线：找出「正在进行的这一段」和「时间线该插在谁前面」 */
+const nMin = nowMin();
+const spanOf = function(it){ return it.type==="course" ? [hm2m(it.c.start), hm2m(it.c.end)] : [it.start, it.end]; };
+let liveIdx = -1;
+for(let i=0;i<items.length;i++){ const sp = spanOf(items[i]); if(nMin >= sp[0] && nMin < sp[1]){ liveIdx = i; break; } }
+let lineAt = -1;
+for(let i=0;i<items.length;i++){ if(nMin < spanOf(items[i])[0]){ lineAt = i; break; } }
+if(lineAt < 0) lineAt = items.length;
+if(liveIdx >= 0) lineAt = liveIdx;
 box.innerHTML = planBlockHtml(plans, false, rest)
-+ items.map(function(it){
-return it.type==="course" ? courseHtml(it.c)
-: gapHtml(it, plans.filter(function(p){ return inGapRange(p, it); }));
++ items.map(function(it, i){
+return (i===lineAt ? nowLineHtml() : "")
++ (it.type==="course" ? courseHtml(it.c, i===liveIdx)
+: gapHtml(it, plans.filter(function(p){ return inGapRange(p, it); }), i===liveIdx));
 }).join("")
++ (lineAt === items.length ? nowLineHtml() : "")
 + addRowHtml();
 }
 function addPlan(slot, text, remember){
@@ -1999,6 +2042,17 @@ function closeNewsSheet(){
   document.getElementById("newsMask").hidden = true;
   document.body.classList.remove("lock-scroll");
 }
+
+/* ---- 现在时间线：每分钟自己走一格；正在输入/编辑时不打断 ---- */
+let nowSig = Math.floor(Date.now()/60000);
+setInterval(function(){
+  const sig = Math.floor(Date.now()/60000);
+  if(sig === nowSig) return;
+  nowSig = sig;
+  const box = document.getElementById("todayList");
+  if(!box || box.querySelector("input") || box.querySelector(".plan-edit")) return;
+  try{ renderToday(); }catch(e){}
+}, 20000);
 
 /* ---- 启动 ---- */
 function renderAll(){
