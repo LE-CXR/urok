@@ -48,6 +48,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .today-gap{margin:3px 0;border:1px dashed var(--todayb);background:var(--today);border-radius:12px;padding:4px 10px}
 .gap-row{display:flex;align-items:center;gap:6px;min-height:24px}
 
+/* 今日课程表头：周徽标 + 下节课提醒（颜色取该门课的颜色） */
+.today-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.today-row .today-meta{margin-bottom:0}
+.next-tip{display:flex;flex-direction:column;align-items:flex-end;gap:2px;min-width:0;text-align:right;animation:ntIn .26s ease}
+.next-tip[hidden]{display:none}
+.next-tip b{font-size:13.5px;font-weight:800;color:var(--nt,#da7756);letter-spacing:.2px;white-space:nowrap}
+.next-tip span{font-size:11.5px;color:var(--nt,#da7756);opacity:.72;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes ntIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
 /* 现在时间线（iOS 日历风）：一条橙线 + 左侧圆点 + 时间 */
 .now-line{display:flex;align-items:center;gap:8px;margin:2px 2px 6px}
 .now-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(218,119,86,.15)}
@@ -399,7 +408,10 @@ html.dark .reader-frame{background:#1a1917}
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2"/><path d="M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     今日课程
   </h2>
-  <div class="today-meta" id="todayMeta"></div>
+  <div class="today-row">
+    <div class="today-meta" id="todayMeta"></div>
+    <div class="next-tip" id="nextTip" hidden></div>
+  </div>
   <div class="today-list" id="todayList"></div>
 </section>
 
@@ -513,7 +525,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.19</div>
+    <div class="cs-ver">2026-10-12.20</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -650,6 +662,28 @@ function leftTxt(m){
   if(h) return h+" 小时";
   return r+" 分";
 }
+/* 下节课提醒：开课前 25 分钟内出现，写清教室 / 时间 / 老师 / 还剩多久，颜色用这门课的颜色 */
+const NEXT_WARN = 25;
+function nextTipHtml(nx, left){
+  if(!nx || left < 0 || left > NEXT_WARN) return "";
+  const tail = left <= 5 ? ("就剩 " + left + " 分钟，快跑！")
+    : left <= 10 ? ("还有 " + left + " 分钟，该动身了")
+    : left <= 18 ? ("还有 " + left + " 分钟，收拾一下")
+    : ("还有 " + left + " 分钟，不慌");
+  return '<b>'+nx.start+' · '+esc2(nx.loc)+'</b><span>'+esc2(nx.teacher)+' · '+tail+'</span>';
+}
+function renderNextTip(list){
+  const tip = document.getElementById("nextTip");
+  if(!tip) return;
+  const n = nowMin();
+  const nx = (list || []).filter(function(c){ return hm2m(c.start) > n; })
+    .sort(function(a,b){ return hm2m(a.start) - hm2m(b.start); })[0];
+  const html = nextTipHtml(nx, nx ? hm2m(nx.start) - n : -1);
+  if(!html){ tip.hidden = true; tip.innerHTML = ""; return; }
+  tip.style.setProperty("--nt", colorOf(nx));
+  tip.innerHTML = html;
+  tip.hidden = false;
+}
 function nowLineHtml(){ return '<div class="now-line"><span class="now-dot"></span><span class="now-txt">现在 '+m2hm(nowMin())+'</span><span class="now-rule"></span></div>'; }
 function courseHtml(c, isNow){
   return '<div class="t-item'+(isNow?' is-now':'')+'"><span class="t-flag" style="background:'+colorOf(c)+'"></span>'
@@ -693,14 +727,11 @@ function inGapRange(p, g){ const s = slotStartOf(p); return s >= 0 && s >= g.sta
 function gapTip(start, len){
 const h = start/60;
 let pool;
-if(len >= 120) pool = ["别全刷手机了","啃最难的那件事","够去趟健身房","够写一整篇东西","整块时间最值钱"];
-else if(len >= 100) pool = ["够运动一次","去图书馆坐坐","够做完一套题","够去趟图书馆"];
-else if(h < 12) pool = ["先干最难的那件","背点单词刚好","效率最高别浪费","啃硬骨头的时间"];
-else if(h < 14) pool = ["犯困就挑轻的做","出去走五分钟","整理笔记回消息"];
-else if(h < 16) pool = ["起来动一动","看会儿书正好","把上午的事收尾","起来走走再学习"];
-else if(h < 18) pool = ["运动黄金时段","去跑个步吧","做点体力活","这时候运动最舒服"];
-else if(h < 20) pool = ["适合看书复盘","把今天收个尾","背单词听听力","适合写点东西"];
-else pool = ["放松一下","睡前别刷太久"];
+if(len >= 120) pool = ["整块时间别浪费","来做点正事吧","今天自律了吗","这俩小时很值钱"];
+else if(h < 12) pool = ["来做点什么吧","今天自律了吗","这时候脑子最清醒","开个好头"];
+else if(h < 17) pool = ["下午别打瞌睡","来做点什么吧","今天自律了吗","起来动两下"];
+else if(h < 19) pool = ["去动一动吧","今天运动了吗","趁天还亮","出去走走"];
+else pool = ["今天收个尾吧","今天自律了吗","做点安静的","睡前别刷太久"];
 const i = (new Date().getDate()*7 + Math.round(start/30)*3 + Math.round(len/15)) % pool.length;
 return pool[i];
 }
@@ -738,7 +769,7 @@ if(h2) h2.style.display = noClass ? "none" : "";
 mt.style.display = noClass ? "none" : "";
 const box = document.getElementById("todayList");
 const plans = dayPlan();
-if(!list.length){ box.innerHTML = planBlockHtml(plans, true, plans) + addRowHtml(); return; }
+if(!list.length){ box.innerHTML = planBlockHtml(plans, true, plans) + addRowHtml(); renderNextTip([]); return; }
 /* ——空档规则：只在两节课之间的空当给计划位——
    上课前那段不算（9 点上课，8 点的空当没意义）
    11:30–14:00 是吃饭午休，直接挖掉
@@ -787,6 +818,7 @@ return (i===lineAt ? nowLineHtml() : "")
 }).join("")
 + (lineAt === items.length ? nowLineHtml() : "")
 + addRowHtml();
+renderNextTip(list);
 }
 function addPlan(slot, text, remember){
 text = String(text||"").trim(); if(!text) return;
@@ -1078,17 +1110,19 @@ applyTheme();
    - 实时批量  qt.gtimg.cn（GBK 编码）
    - 分时      web.ifzq.gtimg.cn/appstock/app/minute/query（A股/港股/指数）
    - 日K       web.ifzq.gtimg.cn/appstock/app/fqkline/get
-   - 美股分时  东方财富 push2his trends2
-   - 美股日K   web.ifzq.gtimg.cn/appstock/app/usfqkline/get（优先），东财 kline 兜底
+   - 分钟K     ifzq.gtimg.cn/appstock/app/kline/mkline（A股实测直连；港股/美股不支持）
+   - 美股分时 / 分钟K  东方财富 push2his（时通时不通，仅兜底，失败后 30 分钟不再试）
    缓存：localStorage 兜底，断网时展示上次成功数据
 ========================================================= */
 const TX_Q = "https://qt.gtimg.cn/q=";
 const TX_MIN = "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=";
 const TX_K = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
 const EM_TREND = "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=";
+const EM_KLINE = "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=";
 const TX_USFQ = "https://web.ifzq.gtimg.cn/appstock/app/usfqkline/get?param=";
 const TX_USMIN = "https://web.ifzq.gtimg.cn/appstock/app/usMinute/query?code=";
 const TX_DAY = "https://web.ifzq.gtimg.cn/appstock/app/day/query?code=";
+const TX_MK = "https://ifzq.gtimg.cn/appstock/app/kline/mkline?param=";
 
 /* ---- 精选股票池（74 支：美股 32 + A股 22 + 港股 16，按当日涨跌自动分组，涨跌各取前 20） ---- */
 const POOL = [
@@ -1201,6 +1235,15 @@ function fetchEMJSONP(url, ms){
     s.onerror = ()=>{ cleanup(); resolve(null); };
     document.head.appendChild(s);
   });
+}
+
+/* 东财 push2his：部分网络（含本机）整段不可达，连 curl 都连不上。
+   失败一次后 30 分钟内不再尝试，否则每次点开股票都要白等一轮超时。 */
+function emIsDead(){
+  try{ return Number(localStorage.getItem("emDead") || 0) > Date.now(); }catch(e){ return false; }
+}
+function emMarkDead(){
+  try{ localStorage.setItem("emDead", String(Date.now() + 30*60*1000)); }catch(e){}
 }
 
 function parseQt(text){
@@ -1324,7 +1367,7 @@ async function loadK(item, n, ytd){
   // 东财 klines 每项是 "日期,开,收,高,低,..." 逗号分隔字符串；兼容嵌套数组
   const clean = kl => kl.map(r=>{
     const p = Array.isArray(r) ? r : String(r).split(",");
-    return {t: String(p[0]).slice(5), v:+p[2]};
+    return {t: String(p[0]).slice(5), v:+p[2], h:+p[3], l:+p[4]};
   }).filter(x=>isFinite(x.v) && x.v > 0);
   // 美股/指数日K：优先腾讯 usfqkline（体积小、CORS 开放、全部标的可用），失败再退东财 kline
   if(item.em){
@@ -1653,11 +1696,15 @@ async function loadWeek(it){
       }
     }catch(e){}
   }
-  /* 美股：东方财富 5 日分时 */
-  const sid = secidOf(it);
+  /* 美股：东方财富 5 日分时（不可达时直接退 5 根日K，不再空等） */
+  const sid = emIsDead() ? "" : secidOf(it);
   if(sid){
     try{
-      const j = await withRetry(()=>fetchJSON(EM_TREND + sid + "&fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&ndays=5&iscr=0"), 2, 400);
+      const j = await withRetry(async function(){
+        const r = await fetchEMJSONP(EM_TREND + sid + "&fields1=f1,f2,f3,f4&fields2=f51,f52,f53,f54&ndays=5&iscr=0", 5000);
+        if(!r || !r.data) throw new Error("em-empty");
+        return r;
+      }, 2, 500);
       const arr = j && j.data && j.data.trends;
       if(arr && arr.length > 20){
         it.week = arr.map(s=>{ const p = String(s).split(","); return {t: p[0].slice(5,16), v: +p[2]}; })
@@ -1665,7 +1712,7 @@ async function loadWeek(it){
         it.fbw = "5日分时";
         return it.week.length;
       }
-    }catch(e){}
+    }catch(e){ emMarkDead(); }
   }
   /* 都失败：退回 5 根日K */
   if(!it.kp || !it.kp[5]){ try{ await loadK(it, 5); }catch(e){} }
@@ -1674,6 +1721,60 @@ async function loadWeek(it){
   return it.week.length;
 }
 
+function ymdAgo(days){
+  const d = new Date(Date.now() - days*86400000);
+  return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+}
+/* 细粒度K线（15/30 分钟）：A股走腾讯 mkline（实测直连、CORS 开放，最多 600 根）；
+   港股/美股腾讯不提供分钟K → 退东财（被拦时 12h 熔断），都拿不到就由上层退日线 */
+async function loadFine(item, klt, days){
+  const key = "k" + klt;
+  if(item.kq && item.kq[key]) return item.kq[key];
+  const tx = String(item.tx || "");
+  let pts = [];
+  if(tx.indexOf("sh") === 0 || tx.indexOf("sz") === 0){
+    try{
+      const j = await withRetry(()=>fetchJSON(TX_MK + tx + ",m" + klt + ",,600"), 2, 400);
+      const node = j && j.data && j.data[tx] && j.data[tx]["m" + klt];
+      if(Array.isArray(node) && node.length >= 3){
+        pts = node.map(function(r){
+          const ts = String((r && r[0]) || "");
+          return {
+            d: ts.slice(0,4) + "-" + ts.slice(4,6) + "-" + ts.slice(6,8),
+            t: ts.slice(4,6) + "-" + ts.slice(6,8),
+            v: +r[2], h: +r[3], l: +r[4]
+          };
+        }).filter(function(x){ return isFinite(x.v) && x.v > 0; });
+      }
+    }catch(e){ pts = []; }
+  }
+  if(!pts.length && !emIsDead()){
+    const sid = secidOf(item);
+    if(sid){
+      try{
+        const j = await withRetry(async function(){
+          const r = await fetchEMJSONP(EM_KLINE + sid + "&klt=" + klt + "&fqt=1&beg=0&end=20500101&lmt=1000"
+            + "&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61", 6000);
+          if(!r || !r.data) throw new Error("em-empty");
+          return r;
+        }, 2, 500);
+        const kl = (j && j.data && j.data.klines) || [];
+        pts = kl.map(function(r){
+          const p = String(r).split(",");
+          return {d: p[0].slice(0,10), t: p[0].slice(5,10), v:+p[2], h:+p[3], l:+p[4]};
+        }).filter(function(x){ return isFinite(x.v) && x.v > 0; });
+      }catch(e){ pts = []; emMarkDead(); }
+    }
+  }
+  if(pts.length && days){
+    const cut = ymdAgo(days);
+    const win = pts.filter(function(p){ return p.d >= cut; });
+    if(win.length >= 3) pts = win;
+  }
+  /* 失败的空结果不进缓存，下次点还能再试 */
+  if(pts.length){ item.kq = item.kq || {}; item.kq[key] = pts; }
+  return pts;
+}
 function switchTab(){
   document.querySelectorAll("#dlTabs button").forEach(b=>b.classList.toggle("on", b.dataset.r===detailRange));
   const chart = document.getElementById("dlChart");
@@ -1690,14 +1791,23 @@ function switchTab(){
     } else if(detailRange === "ytd"){
       if(!it.kp || !it.kp.ytd){ await loadK(it, 0, true); }
       pts = it.kp && it.kp.ytd;
+      fb = "日线";
     } else if(detailRange === "5d"){
   await loadWeek(it);
   pts = it.week;
   fb = it.fbw || "";
+  } else if(detailRange === "1mo"){
+  /* 1个月 → 15 分钟线（A股走腾讯 mkline 约 360 根，比 22 根日线细得多）；拿不到就退日线 */
+  let fine = await loadFine(it, 15, 30);
+  let fineLbl = "15分钟线";
+  if(!fine || fine.length < 3){ fine = await loadFine(it, 30, 30); fineLbl = "30分钟线"; }
+  if(fine && fine.length >= 3){ pts = fine; fb = fineLbl; }
+  else { if(!it.kp || !it.kp[22]){ await loadK(it, 22); } pts = it.kp && it.kp[22]; fb = "日线"; }
   } else {
-  const n = detailRange==="1mo"?22 : detailRange==="3mo"?66 : 130;
+  /* 3mo / 6mo: intraday history is not long enough, so daily K + per-day high/low wicks */
+  const n = detailRange==="3mo"?66 : 130;
   if(!it.kp || !it.kp[n]){ await loadK(it, n); }
-  pts = it.kp && it.kp[n];}
+  pts = it.kp && it.kp[n]; fb = "日线";}
     const chg = document.getElementById("dlChg");
     const tc = themeColors();
     if(!pts || pts.length < 3){
@@ -1731,12 +1841,20 @@ function switchTab(){
   })();
 }
 function bigSVG(pts, color, range, fb){
-  pts = thin(pts, 200).filter(p=>p && isFinite(p.v));
+  pts = pts.filter(p=>p && isFinite(p.v));
+  const useWick = pts.length > 3 && pts.length <= 200 && isFinite(pts[0].h) && isFinite(pts[0].l);
+  pts = thin(pts, 200);
   const tc = themeColors();
   const w = 420, h = 236;
   const padL = 10, padR = 58, padT = 14, padB = 26;
-  const vals = pts.map(p=>p.v);
-  let min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+  /* y-domain must include the wicks, otherwise highs/lows get clipped */
+  let min = Infinity, max = -Infinity;
+  pts.forEach(function(p){
+    const lo = (useWick && isFinite(p.l) && p.l > 0) ? Math.min(p.v, p.l) : p.v;
+    const hi = (useWick && isFinite(p.h) && p.h > 0) ? Math.max(p.v, p.h) : p.v;
+    if(lo < min) min = lo;
+    if(hi > max) max = hi;
+  });
   const pad = Math.max((max-min)*0.05, 0.0001);
   min -= pad; max += pad;
   const span = (max-min) || 1;
@@ -1747,12 +1865,18 @@ function bigSVG(pts, color, range, fb){
   const uid = "big" + (++sparkUid);
   const yb = h-padB;
   const area = pts.map((p,i)=>px(i).toFixed(1)+","+py(p.v).toFixed(1)).join(" L ") + " L " + px(n-1).toFixed(1) + "," + yb.toFixed(1) + " L " + px(0).toFixed(1) + "," + yb.toFixed(1) + " Z";
-  // Y 轴刻度（3 档，右侧）
+  /* per-day high/low wicks so longer ranges have visible detail too */
+  const wickHtml = useWick ? pts.map(function(p,i){
+    if(!isFinite(p.h) || !isFinite(p.l) || p.h <= 0 || p.l <= 0) return "";
+    const x = px(i).toFixed(1);
+    return '<line x1="'+x+'" y1="'+py(p.h).toFixed(1)+'" x2="'+x+'" y2="'+py(p.l).toFixed(1)+'" stroke="'+color+'" stroke-width="1" opacity="0.3"/>';
+  }).join("") : "";
+  // Y axis: 4 ticks on the right
   const ticks = [];
   for(let i=0;i<=3;i++) ticks.push({v: min + span*i/3, x: w-padR+4, y: py(min + span*i/3)});
   const tickHtml = ticks.map(t=>'<text x="'+t.x+'" y="'+(t.y+3)+'" font-size="10" fill="'+tc.axis+'">'+fmtPrice(t.v)+'</text>').join("");
-  // X 轴刻度（首/中/尾）
-  const xi = [0, Math.floor((n-1)/2), n-1];
+  // X axis: first / 1-3 / 2-3 / last
+  const xi = n >= 12 ? [0, Math.round((n-1)/3), Math.round((n-1)*2/3), n-1] : [0, n-1];
   const xHtml = xi.map(i=>'<text x="'+px(i)+'" y="'+(h-8)+'" text-anchor="'+(i===0?"start":i===n-1?"end":"middle")+'" font-size="10" fill="'+tc.axis+'">'+pts[i].t+'</text>').join("");
   return '<svg viewBox="0 0 '+w+' '+h+'" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">'
     + '<defs><linearGradient id="'+uid+'" x1="0" y1="0" x2="0" y2="1">'
@@ -1760,11 +1884,12 @@ function bigSVG(pts, color, range, fb){
     + '<stop offset="1" stop-color="'+color+'" stop-opacity="0"/>'
     + '</linearGradient></defs>'
     + '<path d="M '+area+'" fill="url(#'+uid+')"/>'
+    + wickHtml
     + '<polyline fill="none" stroke="'+color+'" stroke-width="5" opacity="0.12" stroke-linejoin="round" stroke-linecap="round" points="'+line+'"/>'
     + '<polyline fill="none" stroke="'+color+'" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" points="'+line+'"/>'
     + '<circle cx="'+px(n-1).toFixed(1)+'" cy="'+py(pts[n-1].v).toFixed(1)+'" r="3.5" fill="'+color+'" stroke="#fff" stroke-width="1.4"/>'
     + tickHtml + xHtml
-    + (fb ? '<text x="'+(w-2)+'" y="12" text-anchor="end" font-size="10" fill="'+tc.axis+'">'+fb+'</text>' : "")
+    + (fb ? '<text x="'+padL+'" y="12" text-anchor="start" font-size="10" fill="'+tc.axis+'">'+fb+'</text>' : "")
     + '</svg>';
 }
 
