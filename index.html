@@ -254,6 +254,23 @@ html.dark .btn.ghost{background:#2c2a27;border-color:var(--line)}
 .mkt-group{flex:none;width:400px;scroll-snap-align:start;display:flex;flex-direction:column;gap:8px}
 .mkt-logic{margin-top:14px;font-size:13.5px;color:var(--sub);line-height:1.7;border-top:1px dashed var(--line);padding-top:10px}
 .mkt-logic b{color:var(--ink)}
+.mkt-logic .logic-hd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.mkt-logic .logic-sub{font-size:11.5px;color:var(--sub);opacity:.85}
+.mkt-logic .logic-line{margin-top:4px}
+.mkt-logic .logic-topic{color:var(--accent)}
+.mkt-logic .logic-none{color:var(--sub);opacity:.85}
+.mkt-logic .logic-k{display:inline-block;min-width:30px;color:var(--sub);font-size:12px;margin-right:4px}
+.mkt-logic i.logic-kw{font-style:normal;color:var(--ink)}
+.mkt-logic em{font-style:normal;color:var(--sub);font-size:12px;margin-left:6px}
+.mkt-logic .logic-more{margin-top:9px;color:var(--accent);font-weight:700;font-size:12.5px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.mkt-logic .logic-caret{transition:transform .2s}
+.mkt-logic .logic-more.on .logic-caret{transform:rotate(90deg)}
+.mkt-logic .logic-quotes{margin-top:8px;border-top:1px dashed var(--line)}
+.mkt-logic .logic-quote{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed var(--line);padding:8px 0;cursor:pointer;font:inherit;color:var(--ink)}
+.mkt-logic .logic-quote:active{opacity:.7}
+.mkt-logic .logic-quote-t{display:block;font-size:12.5px;line-height:1.45}
+.mkt-logic .logic-quote-m{display:block;font-size:11.5px;color:var(--sub);margin-top:2px}
+.mkt-logic .logic-foot{margin-top:9px;font-size:11.5px;color:var(--sub);opacity:.8}
 /* 详情弹层 */
 .modal-mask{position:fixed;inset:0;background:rgba(20,19,17,.45);backdrop-filter:blur(2px);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
 .modal-mask[hidden]{display:none}
@@ -525,7 +542,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-12.20</div>
+    <div class="cs-ver">2026-10-12.21</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1529,15 +1546,13 @@ function renderMarket(q, tag){
   // 每屏一组 4 条：组宽度对齐滚动容器
   fitGroups();
 
-  // 今日逻辑（动态）
+  // 今日逻辑：领涨/领跌 × 最近 60 小时快讯 × 同板块联动（只写有依据的话）
   const logic = document.createElement("div");
   logic.className = "mkt-logic";
-  const leadUp = ups.slice(0,3).map(i=>i.pool.name+" "+fmtPct(i.q.pct)).join("、");
-  const leadDown = downs.slice(0,3).map(i=>i.pool.name+" "+fmtPct(i.q.pct)).join("、");
-  logic.innerHTML = "<b>今日逻辑</b>：" +
-    (leadUp ? "领涨 "+leadUp+"；" : "暂无上涨标的；") +
-    (leadDown ? "领跌 "+leadDown+"。" : "暂无下跌标的。");
+  logic.id = "mktLogic";
   box.appendChild(logic);
+  logicState = {ups: ups, downs: downs, idx: idxItems, all: all};
+  renderLogic();
 
   // 全量并发加载分时（并发 6），每支渲染迷你图
   loadAllCharts();
@@ -2110,7 +2125,347 @@ function addNews(items){
   newsStore = merged.slice(0, 300);
   renderNews();
   writeNewsCache(newsStore);
+  refreshLogic();
 }
+
+/* =========================================================
+   今日逻辑：把「池内的涨跌」和最近 60 小时（今天 + 昨天）的快讯对上号
+   输出结构（对不上快讯就明说，不编理由、不空话）：
+     大盘       指数当日表现 + 涨跌分化
+     领涨/领跌  每个方向取一条主线板块：板块名 + 组内幅度靠前的几只 + 能对上的快讯标题
+     点名       被快讯直接点名、且没在上面出现过的个股（最多 2 条）
+     看点       领涨、领跌分别压在哪条线上（资金从哪换到哪）
+   判定顺序 pickReason：direct（标题直接点名该票）> theme（标题命中该票所属板块关键词）> sector（只讲同板块联动）
+   ========================================================= */
+/* 页面里的 esc 是 newsItemHtml 的局部 const，这里补一个同名全局函数（函数声明与局部 const 不冲突） */
+function esc(s){ return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+  .replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+var STOCK_ALIAS = {
+  "sh601127":["赛力斯","问界"],"sz002594":["比亚迪"],"sz300750":["宁德时代"],
+  "sh601138":["工业富联","富士康"],"sz300308":["中际旭创","旭创"],"sz002475":["立讯精密","立讯"],
+  "sh688981":["中芯国际","中芯"],"hk00981":["中芯国际","中芯"],"sh688256":["寒武纪"],
+  "sz002371":["北方华创"],"sz002230":["科大讯飞","讯飞"],"sz002415":["海康威视","海康"],
+  "sh600519":["贵州茅台","茅台"],"sh601318":["中国平安"],"sh600036":["招商银行","招行"],
+  "sz300059":["东方财富"],"sh601012":["隆基绿能","隆基"],"sh601899":["紫金矿业","紫金"],
+  "sh600900":["长江电力"],"sh600309":["万华化学","万华"],"sz000333":["美的集团","美的"],
+  "sh600276":["恒瑞医药","恒瑞"],"sh600150":["中国船舶"],
+  "hk00700":["腾讯"],"hk09988":["阿里巴巴","阿里"],"usBABA":["阿里巴巴","阿里"],
+  "hk03690":["美团"],"hk01810":["小米"],"hk09618":["京东"],"hk01024":["快手"],
+  "hk01299":["友邦保险","友邦"],"hk02269":["药明生物","药明"],"hk09999":["网易"],
+  "hk09961":["携程"],"hk02020":["安踏"],"hk06862":["海底捞"],"hk02015":["理想汽车"],
+  "hk00388":["香港交易所","港交所"],"hk00941":["中国移动"],
+  "usNVDA":["英伟达"],"usAAPL":["苹果"],"usMSFT":["微软"],"usGOOGL":["谷歌"],
+  "usAMZN":["亚马逊"],"usMETA":["Meta"],"usTSLA":["特斯拉"],"usAMD":["AMD"],
+  "usINTC":["英特尔"],"usNFLX":["奈飞"],"usAVGO":["博通"],"usORCL":["甲骨文"],
+  "usPLTR":["Palantir"],"usMU":["美光"],"usQCOM":["高通"],"usSMCI":["超微电脑"],
+  "usPDD":["拼多多"],"usBILI":["哔哩哔哩"],"usPYPL":["PayPal"],"usCOIN":["Coinbase"],
+  "usUBER":["优步"],"usSHOP":["Shopify"],"usCRM":["赛富时"],"usADBE":["Adobe"],
+  "usDIS":["迪士尼"],"usNKE":["耐克"],"usWMT":["沃尔玛"],"usMA":["万事达"],
+  "usLLY":["礼来"],"usTSM":["台积电"],"usJPM":["摩根大通"]
+};
+var THEMES = [
+  {n:"AI 算力 / 芯片", k:["算力","英伟达","数据中心","服务器","光模块","CPO","液冷","存储芯片","HBM","晶圆","先进制程","大模型","ASIC","交换机"],
+   tx:["usNVDA","usAMD","usAVGO","usMU","usSMCI","usTSM","usINTC","usQCOM","usORCL","usMSFT","usGOOGL","usMETA","usAMZN","sh601138","sz300308","sh688981","hk00981","sz002371","sh688256","sz002230"]},
+  {n:"AI 应用 / 软件", k:["Copilot","大模型应用","AI 应用","办公软件","SaaS","数据分析","企业软件","数据智能"],
+   tx:["usPLTR","usCRM","usADBE","usORCL","usMSFT","usGOOGL","sz002230","usMETA"]},
+  {n:"消费电子 / 果链", k:["苹果","iPhone","消费电子","果链","折叠屏","鸿蒙","穿戴设备"],
+   tx:["usAAPL","usQCOM","sz002475","hk01810"]},
+  {n:"新能源车 / 电池", k:["新能源车","电动车","车企","电池","锂电","锂矿","特斯拉","智驾","辅助驾驶","以旧换新","充电桩","固态电池"],
+   tx:["usTSLA","sz002594","sz300750","sh601127","hk02015"]},
+  {n:"互联网 / 电商", k:["平台经济","直播带货","短视频","反垄断","消费复苏","双十一","外卖","即时零售"],
+   tx:["usBABA","usPDD","usBILI","hk09988","hk09618","hk03690","hk01024","hk00700","usSHOP","usAMZN"]},
+  {n:"美联储 / 流动性", k:["美联储","降息","加息","鲍威尔","非农","CPI","PCE","美债","收益率","美元指数","缩表","议息","通胀数据"],
+   tx:["usIXIC","usINX","usDJI","usJPM","usMA","usLLY","hk01299","hk00388","usPYPL"]},
+  {n:"关税 / 地缘", k:["关税","贸易摩擦","制裁","出口管制","实体清单","台海","海峡","军演","地缘"],
+   tx:["usNVDA","usAAPL","usTSM","sh688981","hk00981","sh600150","sh601138","sz300308"]},
+  {n:"医药 / 创新药", k:["创新药","集采","FDA","临床","减肥药","GLP-1","疫苗","CXO","医保谈判"],
+   tx:["usLLY","sh600276","hk02269"]},
+  {n:"光伏 / 电力", k:["光伏","硅料","风电","储能","电网","核电","绿电"],
+   tx:["sh601012","sh600900","sz300750"]},
+  {n:"金融 / 券商", k:["券商","降准","存款利率","印花税","IPO","两融","公募","成交额"],
+   tx:["sz300059","sh601318","sh600036","hk01299","hk00388","usJPM","usMA","usPYPL","usCOIN"]},
+  {n:"消费 / 白酒", k:["白酒","免税","零售","餐饮","运动服饰","旅游"],
+   tx:["sh600519","hk06862","hk02020","usNKE","usWMT","usDIS","hk09961","hk03690"]},
+  {n:"通信 / 运营商", k:["运营商","5G","6G","物联网","卫星","算力网络","光通信"],
+   tx:["hk00941","hk00700","sz300308"]},
+  {n:"传媒 / 游戏", k:["版号","影视","短剧","游戏出海"],
+   tx:["hk00700","hk09999","usNFLX","usDIS","hk01024"]},
+  {n:"有色 / 大宗", k:["黄金","白银","铜价","铝","原油","油价","大宗商品","稀土"],
+   tx:["sh601899","sh600309","sh600150"]}
+];
+var logicState = null;
+
+function newsClock(it){
+  var s = String((it && it.time) || "");
+  return s.length >= 16 ? s.slice(0, 16) : s.slice(0, 10);
+}
+function logicNewsPool(){
+  var d = new Date(Date.now() - 60 * 3600 * 1000);
+  var cut = d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate()) + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return newsStore.filter(function(it){
+    if(!it || !it.t || !it.url) return false;
+    if(it.cat === "spo" || it.cat === "ent") return false;
+    var c = newsClock(it);
+    return c.length >= 16 ? c >= cut : true;
+  });
+}
+function aliasList(pool){
+  return [pool.name].concat(STOCK_ALIAS[pool.tx] || []).filter(function(x){ return x && x.length >= 2; });
+}
+function themesOf(tx){
+  var out = [];
+  THEMES.forEach(function(T){ if(T.tx.indexOf(tx) >= 0) out.push(T); });
+  return out;
+}
+/* 一只票归到哪条线（取第一条命中的主题，页面里主题按相关性排序） */
+function topicOf(item){
+  var t = themesOf(item.pool.tx);
+  return t.length ? t[0].n : "";
+}
+/* 有「动作」的快讯才算线索：只说「某官员演讲提到人工智能」这种不构成涨跌原因 */
+var SIGNAL = ["涨停","跌停","大涨","大跌","重挫","跳水","回落","走高","走低","反弹","创新高","创新低",
+  "业绩","预增","预减","净利","营收","订单","中标","签约","收购","并购","重组","停产","减产","扩产",
+  "涨价","降价","回购","增持","减持","立案","调查","罚款","退市","问询","关税","管制","实体清单","制裁",
+  "降息","加息","降准","补贴","获批","上市","解禁","停牌","净买","净卖","成交额","评级","目标价","上调","下调",
+  "砍单","抛售","放缓","停工","召回"];
+/* 快讯语气：上涨的板块要配「利好」类快讯，下跌的板块要配「利空」类快讯。
+   语气相反的（比如跌的票配一条「上调目标价」）不许当原因，宁可说没有。 */
+var TONE_UP = ["上涨","大涨","涨停","创新高","新高","走高","回升","反弹","利好","超预期","好于预期",
+  "增长","预增","扭亏","中标","订单","签约","中标","合作","获批","量产","交付","扩张","扩产","提价",
+  "涨价","回购","增持","上调","提高目标价","降息","降准","补贴","突破","放量"];
+var TONE_DOWN = ["下跌","大跌","跌停","创新低","新低","走低","回落","跳水","重挫","利空","不及预期",
+  "差于预期","下滑","下降","预减","亏损","裁员","减产","停产","减持","调查","处罚","罚款","退市","问询",
+  "立案","下调","降低目标价","加息","关税","制裁","出口管制","实体清单","召回","放缓","承压","重罚",
+  "砍单","抛售"];
+function toneOf(t){
+  var cu = 0, cd = 0, i;
+  for(i = 0; i < TONE_UP.length; i++){ if(t.indexOf(TONE_UP[i]) >= 0) cu++; }
+  for(i = 0; i < TONE_DOWN.length; i++){ if(t.indexOf(TONE_DOWN[i]) >= 0) cd++; }
+  return cu > cd ? 1 : (cd > cu ? -1 : 0);
+}
+function tuneHead(t, want){ var v = toneOf(t); return v === 0 || v === want; }
+
+function pickReason(item, all, news, used){
+  var pool = item.pool, alias = aliasList(pool), ths = themesOf(pool.tx);
+  var poolNames = [];
+  (all || []).forEach(function(o){ if(poolNames.indexOf(o.pool.name) < 0) poolNames.push(o.pool.name); });
+  var named = null, themed = null;
+  news.forEach(function(n){
+    var t = String(n.t || ""), i;
+    if(used && used[t]) return;                 /* 同一条快讯不重复引用 */
+    var sig = 0;
+    for(i=0;i<SIGNAL.length;i++){ if(t.indexOf(SIGNAL[i]) >= 0){ sig = 1; break; } }
+    var other = 0;
+    for(i=0;i<poolNames.length;i++){ if(t.indexOf(poolNames[i]) >= 0){ other = 1; break; } }
+    /* 1) 标题直接点名这只票（有动作词的优先） */
+    for(i=0;i<alias.length;i++){
+      if(t.indexOf(alias[i]) >= 0){
+        var s1 = 100 + alias[i].length + (sig ? 8 : 0);
+        if(!named || s1 > named.score) named = {score: s1, kind: "direct", kw: alias[i], n: n};
+        return;
+      }
+    }
+    /* 2) 板块关键词命中：取最长命中词，并要求「够具体」——
+          长度 >=4 才算分、含动作词 +6、标题里出现池内公司名 +5；低于 7 分不当作原因 */
+    for(var j=0;j<ths.length;j++){
+      var kws = ths[j].k, hit = "";
+      for(var k=0;k<kws.length;k++){
+        if(t.indexOf(kws[k]) >= 0 && kws[k].length > hit.length) hit = kws[k];
+      }
+      if(hit){
+        var sc = hit.length + (sig ? 6 : 0) + (other ? 5 : 0);
+        /* 命中词越长越可信；两三个字的行业词必须再配上「动作」或池内公司名 */
+        var ok = (hit.length >= 4 && sc >= 7) || (hit.length === 3 && sig) || (hit.length <= 2 && sig && other);
+        if(ok && (!themed || sc > themed.score)){
+          themed = {score: sc, kind: "theme", kw: hit, th: ths[j].n, n: n};
+        }
+        return;
+      }
+    }
+  });
+  if(named) return named;
+  if(themed) return themed;
+  return sectorReason(item, all, ths);
+}
+/* 没有快讯时只能说板块联动：同主题、同方向、幅度靠前的兄弟 */
+function sectorReason(item, all, ths){
+  var peers = [];
+  if(ths.length){
+    var set = ths[0].tx;
+    all.forEach(function(o){
+      if(o.pool.tx === item.pool.tx) return;
+      if(set.indexOf(o.pool.tx) < 0) return;
+      if(o.isUp !== item.isUp) return;
+      peers.push(o);
+    });
+    peers.sort(function(a,b){ return Math.abs(b.q.pct) - Math.abs(a.q.pct); });
+  }
+  return {score: 0, kind: "sector", peers: peers.slice(0,3), th: ths.length ? ths[0].n : ""};
+}
+/* 同方向里按板块聚组：至少 2 只同主题才算一条「线」，组间按组内最强幅度排序 */
+function themeGroups(items){
+  var gs = [];
+  items.forEach(function(it){
+    var k = topicOf(it);
+    if(!k) return;
+    var g = null, i;
+    for(i = 0; i < gs.length; i++){ if(gs[i].n === k){ g = gs[i]; break; } }
+    if(!g){ g = {n:k, items:[]}; gs.push(g); }
+    g.items.push(it);
+  });
+  gs = gs.filter(function(g){ return g.items.length >= 2; });
+  gs.forEach(function(g){
+    g.items.sort(function(a,b){ return Math.abs(b.q.pct) - Math.abs(a.q.pct); });
+    g.lead = Math.abs(g.items[0].q.pct);
+  });
+  gs.sort(function(a,b){ return b.lead - a.lead; });
+  return gs;
+}
+function pctSpan(it, tc){
+  var c = it.isUp ? tc.up : tc.down;
+  return '<span style="color:' + c + '">' + fmtPct(it.q.pct) + '</span>';
+}
+/* 在一条板块线里挑一条能当原因的快讯：直接点名优先，其次板块关键词；
+   语气和涨跌方向相反的（跌的线配「上调目标价」）一律不要 */
+function pickCite(g, want, all, news, used){
+  var best = null;
+  g.items.forEach(function(it){
+    var r = pickReason(it, all, news, used);
+    if(!r || (r.kind !== "direct" && r.kind !== "theme")) return;
+    var t = String(r.n.t || "");
+    if(!tuneHead(t, want)) return;
+    var rank = (r.kind === "direct" ? 20 : 10) + (toneOf(t) === want ? 3 : 0);
+    if(!best || rank > best.rank) best = {r: r, it: it, rank: rank};
+  });
+  return best;
+}
+/* 一条板块线：板块名 + 组内幅度靠前的几只 + 能对上的那条快讯（对不上就明说） */
+function groupLineHtml(g, dir, tc, all, news, used, bag, shown){
+  var want = dir === "领涨" ? 1 : -1;
+  var c0 = pickCite(g, want, all, news, used);
+  var cite = c0 ? c0.r : null, citeItem = c0 ? c0.it : null;
+  var mem = g.items.slice(0, 3);
+  if(citeItem && mem.indexOf(citeItem) < 0) mem = mem.slice(0, 2).concat([citeItem]);
+  var who = mem.map(function(it){
+    shown[it.pool.tx] = 1;
+    return esc(it.pool.name) + " " + pctSpan(it, tc);
+  }).join("、");
+  var tail;
+  if(cite){
+    bag.push(cite);
+    if(used) used[String(cite.n.t || "")] = 1;
+    tail = '<i class="logic-kw">「' + esc(String(cite.n.t).slice(0, 34)) + '」</i><em>'
+      + esc(newsClock(cite.n).slice(5, 16)) + (cite.kind === "direct" ? " · 直接点名" : " · " + esc(cite.kw)) + '</em>';
+  } else {
+    tail = '<span class="logic-none">今天没有对得上的快讯，属于板块自己' + (dir === "领涨" ? "走强" : "走弱") + '。</span>';
+  }
+  return '<div class="logic-line"><span class="logic-k">' + dir + '</span>'
+    + '<b class="logic-topic">' + esc(g.n) + '</b> ' + who + ' ' + tail + '</div>';
+}
+/* 一个方向凑不出板块（只有单只）时，单看这一只自己：有快讯就引，没有就说没有 */
+function soloLineHtml(item, dir, all, news, tc, bag, used, shown){
+  var want = item.isUp ? 1 : -1;
+  var r = pickReason(item, all, news, used);
+  if((r.kind === "direct" || r.kind === "theme") && !tuneHead(String(r.n.t || ""), want)){
+    r = sectorReason(item, all, themesOf(item.pool.tx));
+  }
+  shown[item.pool.tx] = 1;
+  var head = '<span class="logic-k">' + dir + '</span><b>' + esc(item.pool.name) + '</b> ' + pctSpan(item, tc) + ' ';
+  var body;
+  if(r.kind === "direct" || r.kind === "theme"){
+    bag.push(r);
+    if(used) used[String(r.n.t || "")] = 1;
+    body = (r.kind === "direct" ? "被快讯点名：" : "同板块线索（" + esc(r.th) + " · " + esc(r.kw) + "）：")
+      + '<i class="logic-kw">「' + esc(String(r.n.t).slice(0, 34)) + '」</i><em>'
+      + esc(newsClock(r.n).slice(5, 16)) + '</em>';
+  } else if(r.peers && r.peers.length){
+    body = '<span class="logic-none">没有对得上的快讯，同板块同向的是 '
+      + r.peers.map(function(p){ return esc(p.pool.name) + " " + fmtPct(p.q.pct); }).join("、") + '。</span>';
+  } else {
+    body = '<span class="logic-none">没有对得上的快讯，也没看出板块联动，更像个股自己的事。</span>';
+  }
+  return '<div class="logic-line">' + head + body + '</div>';
+}
+function renderLogic(){
+  var box = document.getElementById("mktLogic");
+  if(!box) return;
+  if(!logicState){ box.innerHTML = ""; return; }
+  var st = logicState, tc = themeColors();
+  var news = logicNewsPool();
+  var bag = [], used = {}, shown = {};
+  var upG = themeGroups(st.ups), downG = themeGroups(st.downs);
+  var upLine = upG.length
+    ? groupLineHtml(upG[0], "领涨", tc, st.all, news, used, bag, shown)
+    : st.ups.slice(0, 2).map(function(it){ return soloLineHtml(it, "领涨", st.all, news, tc, bag, used, shown); }).join("");
+  var downLine = downG.length
+    ? groupLineHtml(downG[0], "领跌", tc, st.all, news, used, bag, shown)
+    : st.downs.slice(0, 2).map(function(it){ return soloLineHtml(it, "领跌", st.all, news, tc, bag, used, shown); }).join("");
+  /* 点名：被快讯直接点名、且没在上面出现过的个股（最多 2 条） */
+  var named = [];
+  st.ups.concat(st.downs).forEach(function(it){
+    if(named.length >= 2 || shown[it.pool.tx]) return;
+    var r = pickReason(it, st.all, news, used);
+    if(r && r.kind === "direct" && tuneHead(String(r.n.t || ""), it.isUp ? 1 : -1)){
+      bag.push(r);
+      if(used) used[String(r.n.t || "")] = 1;
+      named.push('<div class="logic-line"><span class="logic-k">点名</span><b>' + esc(it.pool.name) + '</b> '
+        + pctSpan(it, tc) + ' <i class="logic-kw">「' + esc(String(r.n.t).slice(0, 34)) + '」</i><em>'
+        + esc(newsClock(r.n).slice(5, 16)) + ' · 快讯点名</em></div>');
+    }
+  });
+  /* 大盘 */
+  var idx = st.idx.filter(function(i){ return i && i.q && isFinite(i.q.pct); });
+  var upN = idx.filter(function(i){ return i.isUp; }).length;
+  var tone = idx.length
+    ? idx.slice(0, 4).map(function(i){ return esc(i.pool.name) + " " + pctSpan(i, tc); }).join("、")
+      + (upN === idx.length ? "（全线走高）" : upN === 0 ? "（全线走低）" : "（涨跌分化）")
+    : '<span class="logic-none">指数数据还没到。</span>';
+  /* 看点：领涨、领跌分别压在哪条线上 */
+  var upTop = upG.length ? upG[0].n : (st.ups[0] ? topicOf(st.ups[0]) : "");
+  var downTop = downG.length ? downG[0].n : (st.downs[0] ? topicOf(st.downs[0]) : "");
+  var view = "";
+  if(upLine && downLine && upTop && downTop){
+    if(upTop !== downTop){
+      view = '今天的钱在两条线之间换手：一头是 <b>' + esc(upTop) + '</b>，另一头是 <b>' + esc(downTop) + '</b>。';
+    } else {
+      view = '涨跌都压在 <b>' + esc(upTop) + '</b> 这条线上，板块内部在分化，主要看个股自己的消息面。';
+    }
+  }
+  var html = '<div class="logic-hd"><b>今日逻辑</b><span class="logic-sub">'
+    + (news.length
+        ? "对照最近 60 小时 " + news.length + " 条快讯 · 池内 " + st.ups.length + " 涨 / " + st.downs.length + " 跌"
+        : "快讯还没到，先看板块联动")
+    + '</span></div>';
+  html += '<div class="logic-line"><span class="logic-k">大盘</span>' + tone + '</div>';
+  html += upLine + downLine;
+  html += named.join("");
+  if(view) html += '<div class="logic-line"><span class="logic-k">看点</span>' + view + '</div>';
+  if(bag.length){
+    html += '<div class="logic-more" id="logicMore">展开 ' + bag.length + ' 条依据 <span class="logic-caret">›</span></div>';
+    html += '<div class="logic-quotes" id="logicQuotes" hidden>' + bag.map(function(r){
+      return '<button class="logic-quote" data-url="' + esc(r.n.url) + '" data-t="' + esc(r.n.t) + '" data-f="' + esc(r.n.full || "") + '">'
+        + '<span class="logic-quote-t">' + esc(r.n.t) + '</span>'
+        + '<span class="logic-quote-m">' + esc(newsClock(r.n).slice(5, 16)) + ' · '
+        + (r.kind === "direct" ? "点名" : esc(r.th || "板块")) + '</span></button>';
+    }).join("") + '</div>';
+  }
+  html += '<div class="logic-foot">依据 = 快讯原文 + 同板块联动，不是定论；点标题看原文。</div>';
+  box.innerHTML = html;
+  var more = document.getElementById("logicMore"), qs = document.getElementById("logicQuotes");
+  if(more && qs){
+    more.addEventListener("click", function(){
+      qs.hidden = !qs.hidden;
+      more.classList.toggle("on", !qs.hidden);
+    });
+    qs.addEventListener("click", function(e){
+      var b = e.target.closest(".logic-quote");
+      if(b) openNewsReader(b.dataset.url || "", b.dataset.t || "", b.dataset.f || "");
+    });
+  }
+}
+function refreshLogic(){ try{ renderLogic(); }catch(e){} }
+
 function emLoad(col){
   return new Promise(function(resolve){
     try{ delete window.ajax; }catch(e){}
