@@ -586,7 +586,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-19.32</div>
+    <div class="cs-ver">2026-10-19.33</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -2696,6 +2696,7 @@ function renderLogic(){
     if(r && r.kind === "direct" && tuneHead(String(r.n.t || ""), it.isUp ? 1 : -1)){
       bag.push(r);
       if(used) used[String(r.n.t || "")] = 1;
+      shown[it.pool.tx] = 1;   /* 点名已经写过这只，别再让「异动」行重复 */
       named.push('<div class="logic-line"><span class="logic-k">点名</span><b>' + esc(it.pool.name) + '</b> '
         + pctSpan(it, tc) + ' <i class="logic-kw">「' + esc(String(r.n.t).slice(0, 34)) + '」</i><em>'
         + esc(newsClock(r.n).slice(5, 16)) + ' · 快讯点名</em></div>');
