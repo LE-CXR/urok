@@ -295,7 +295,8 @@ html.dark .btn.ghost{background:#2c2a27;border-color:var(--line)}
 .mkt-logic .logic-line{margin-top:4px}
 .mkt-logic .logic-toggle{margin-left:auto;background:none;border:none;font:inherit;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:3px;padding:2px 0}
 .mkt-logic .logic-toggle.on .logic-caret{transform:rotate(90deg)}
-.mkt-logic .logic-brief{margin-top:5px;cursor:pointer;font-size:12.5px;line-height:1.5}
+.mkt-logic .logic-brief-pct{font-style:normal;font-size:.86em;opacity:.75;margin-left:2px}
+.logic-brief{margin-top:5px;cursor:pointer;font-size:12.5px;line-height:1.5}
 .mkt-logic .logic-brief:active{opacity:.75}
 .mkt-logic .logic-body{margin-top:2px}
 .mkt-logic .logic-topic{color:var(--accent)}
@@ -585,7 +586,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-14.31</div>
+    <div class="cs-ver">2026-10-19.32</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1298,6 +1299,7 @@ const TX_MIN = "https://web.ifzq.gtimg.cn/appstock/app/minute/query?code=";
 const TX_K = "https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=";
 const EM_TREND = "https://push2his.eastmoney.com/api/qt/stock/trends2/get?secid=";
 const EM_KLINE = "https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=";
+const EM_RANK = "https://push2.eastmoney.com/api/qt/clist/get";
 const TX_USFQ = "https://web.ifzq.gtimg.cn/appstock/app/usfqkline/get?param=";
 const TX_USMIN = "https://web.ifzq.gtimg.cn/appstock/app/usMinute/query?code=";
 const TX_DAY = "https://web.ifzq.gtimg.cn/appstock/app/day/query?code=";
@@ -1366,6 +1368,7 @@ const POOL = [
   {name:"北方华创", tx:"sz002371", tag:"半导体设备龙头"},
   {name:"寒武纪", tx:"sh688256", tag:"国产 AI 芯片"},
   {name:"中国船舶", tx:"sh600150", tag:"造船周期龙头"},
+  {name:"宇树科技", tx:"sh688836", em:"1.688836", tag:"人形机器人"},
   // 港股 16
   {name:"腾讯控股", tx:"hk00700", tag:"游戏 + 社交 + AI"},
   {name:"阿里巴巴-W", tx:"hk09988", tag:"电商 + 云 + AI"},
@@ -1762,12 +1765,75 @@ function bindClick(){
 }
 
 /* ---- 加载主流程 ---- */
+/* ---- 今日异动：涨幅榜里不在池子的强势股，临时并进来（每次刷新重算；失败不影响主流程） ---- */
+const HOT_MAX = 10, HOT_TOTAL_MAX = 16;
+let hotAdded = 0;
+async function fetchHotList(){
+  const url = EM_RANK + "?pn=1&pz=60&po=1&np=1&fltt=2&invt=2&fid=f3"
+    + "&fs=m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23&fields=f12,f13,f14,f2,f3,f6";
+  const j = await withRetry(function(){ return fetchJSON(url); }, 2, 400);
+  const diff = (j && j.data && j.data.diff) || [];
+  const have = {};
+  POOL.forEach(function(p){ have[p.tx] = 1; });
+  const out = [];
+  diff.forEach(function(d){
+    if(out.length >= HOT_MAX) return;
+    const code = String(d.f12 || ""), name = String(d.f14 || "");
+    const pct = Number(d.f3), amt = Number(d.f6), price = Number(d.f2);
+    if(!code || !name || !isFinite(pct)) return;
+    if(/ST|退/.test(name)) return;
+    if(!isFinite(amt) || amt < 3e8) return;
+    if(!isFinite(price) || price < 2) return;
+    const tx = (String(d.f13) === "1" ? "sh" : "sz") + code;
+    if(have[tx]) return;
+    if(out.some(function(x){ return x.tx === tx; })) return;
+    out.push({ name: name, tx: tx, tag: "今日异动", dyn: true });
+  });
+  return out;
+}
+function mergeHot(list){
+  let n = 0;
+  list.forEach(function(p){
+    if(n + hotAdded >= HOT_TOTAL_MAX) return;
+    if(POOL.some(function(x){ return x.tx === p.tx; })) return;
+    POOL.push(p);
+    if(window.__items) window.__items[p.tx] = null;
+    n++; hotAdded++;
+  });
+  return n;
+}
+/* ---- 行情刷新：交易时段 60s，其余 5min；切回前台 / 网络恢复立刻刷 ---- */
+let mktTimer = 0, mktBusy = false, mktFailOnce = false;
+function mktEvery(){
+  const d = new Date(), m = d.getHours()*60 + d.getMinutes(), wd = d.getDay();
+  const trading = wd >= 1 && wd <= 5 && ((m >= 555 && m <= 695) || (m >= 775 && m <= 905));
+  return trading ? 60000 : 300000;
+}
+async function mktLoop(){
+  clearTimeout(mktTimer);
+  if(!mktBusy){
+    mktBusy = true;
+    try{ await loadMarket(); }catch(e){}
+    mktBusy = false;
+  }
+  mktTimer = setTimeout(mktLoop, mktEvery());
+}
+document.addEventListener("visibilitychange", function(){
+  if(!document.hidden){ try{ mktLoop(); }catch(e){} }
+});
+window.addEventListener("online", function(){ try{ mktLoop(); }catch(e){} });
+
 async function loadMarket(){
   const cache = readQuoteCache();
   if(cache){
     cache.q._t = cache.t;
     renderMarket(cache.q, "缓存 · " + fmtTime(cache.t));
   }
+  /* 先把今日异动并进池子，再一起取行情 */
+  try{
+    const hot = await fetchHotList();
+    if(hot.length) mergeHot(hot);
+  }catch(e){}
   try{
     const codes = POOL.map(p=>p.tx).join(",");
     const text = await fetchGBK(TX_Q + codes);
@@ -1776,8 +1842,9 @@ async function loadMarket(){
     q._t = Date.now();
     writeQuoteCache(q);
     renderMarket(q, "实时 · " + fmtTime(q._t));
+    mktFailOnce = false;
   }catch(e){
-    if(cache) toast("实时行情获取失败，已显示缓存数据");
+    if(cache){ if(!mktFailOnce){ mktFailOnce = true; toast("实时行情获取失败，已显示缓存数据"); } }
     else {
       const box = document.getElementById("mktBox");
       box.innerHTML = '<div class="empty">行情获取失败，可点右上角“刷新”重试</div>';
@@ -2658,9 +2725,21 @@ function renderLogic(){
     : "指数还没到";
   var upName = upTop || (st.ups[0] ? st.ups[0].pool.name : "");
   var downName = downTop || (st.downs[0] ? st.downs[0].pool.name : "");
+  function pctTxt(v){
+    return (v == null || !isFinite(v)) ? ''
+      : (' <span class="logic-brief-pct">' + (v >= 0 ? "+" : "") + v.toFixed(2) + '%</span>');
+  }
+  var upPctV = upG.length ? upG[0].items[0].q.pct : (st.ups[0] ? st.ups[0].q.pct : null);
+  var downPctV = downG.length ? downG[0].items[0].q.pct : (st.downs[0] ? st.downs[0].q.pct : null);
+  var topUp = st.ups[0];
+  var hotSeg = (topUp && isFinite(topUp.q.pct) && Math.abs(topUp.q.pct) >= 5
+      && !(upG.length && upG[0].items[0] === topUp))
+    ? (' · <span class="logic-k">最猛</span><span style="color:' + tc.up + '">'
+       + esc(topUp.pool.name) + '</span>' + pctTxt(topUp.q.pct)) : '';
   var brief = '<span class="logic-k">大盘</span>' + mood
-    + ' · <span class="logic-k">领涨</span><span style="color:' + tc.up + '">' + esc(upName ? shortTopic(upName) : "--") + '</span>'
-    + ' · <span class="logic-k">领跌</span><span style="color:' + tc.down + '">' + esc(downName ? shortTopic(downName) : "--") + '</span>';
+    + ' · <span class="logic-k">领涨</span><span style="color:' + tc.up + '">' + esc(upName ? shortTopic(upName) : "--") + '</span>' + pctTxt(upPctV)
+    + hotSeg
+    + ' · <span class="logic-k">领跌</span><span style="color:' + tc.down + '">' + esc(downName ? shortTopic(downName) : "--") + '</span>' + pctTxt(downPctV);
 
   var subTxt = news.length
     ? "对照最近 60 小时 " + news.length + " 条快讯 · 池内 " + st.ups.length + " 涨 / " + st.downs.length + " 跌"
@@ -2672,6 +2751,17 @@ function renderLogic(){
   html += '<div class="logic-line"><span class="logic-k">大盘</span>' + tone + '</div>';
   html += upLine + downLine;
   html += named.join("");
+  /* 单只跑得特别猛的：没进任何板块线的，也要有一条，不能因为「没成板块」就消失 */
+  var soloHot = [];
+  st.ups.concat(st.downs).forEach(function(it){
+    if(soloHot.length >= 2 || shown[it.pool.tx]) return;
+    if(!isFinite(it.q.pct) || Math.abs(it.q.pct) < 5) return;
+    shown[it.pool.tx] = 1;
+    soloHot.push('<div class="logic-line"><span class="logic-k">'
+      + (it.isUp ? "异动" : "杀跌") + '</span><b>' + esc(it.pool.name) + '</b> '
+      + pctSpan(it, tc) + ' <em>' + esc(it.pool.tag || "个股") + '</em></div>');
+  });
+  html += soloHot.join("");
   if(view) html += '<div class="logic-line"><span class="logic-k">看点</span>' + view + '</div>';
   if(bag.length){
     html += '<div class="logic-more" id="logicMore">展开 ' + bag.length + ' 条依据 <span class="logic-caret">›</span></div>';
@@ -2789,7 +2879,7 @@ function renderAll(){
   renderToday(); setupWeekSel(); renderQuote();
   window.__items = {};
   POOL.forEach(p=>{ window.__items[p.tx] = null; });
-  loadMarket();
+  mktLoop();
   fetchNews();
   document.getElementById("newsCats").addEventListener("click", function(e){
     const b = e.target.closest(".cat-btn"); if(!b) return;
