@@ -586,7 +586,7 @@ html.dark .reader-frame{background:#1a1917}
       <button class="cs-btn" id="csOff">关闭</button>
     </div>
     <div class="cs-msg" id="csMsg"></div>
-    <div class="cs-ver">2026-10-19.33</div>
+    <div class="cs-ver">2026-10-19.34</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -1791,6 +1791,31 @@ async function fetchHotList(){
   });
   return out;
 }
+/* 榜单接口有自己的节奏：5 分钟一次；失败后退避 10 分钟（打太勤会被限流） */
+const HOT_EVERY = 300000, HOT_BACKOFF = 600000;
+let hotAt = 0, hotFailAt = 0, hotRetryT = 0;
+async function maybeHot(){
+  const now = Date.now();
+  if(now - hotAt < HOT_EVERY) return 0;
+  if(hotFailAt && now - hotFailAt < HOT_BACKOFF) return 0;
+  hotAt = now;
+  try{
+    const hot = await fetchHotList();
+    const n = hot.length ? mergeHot(hot) : 0;
+    hotFailAt = 0;
+    return n;
+  }catch(e){
+    hotFailAt = Date.now();
+    /* 首屏偶尔被限流：15 秒后自己再补一次，还失败才走 10 分钟退避 */
+    if(!hotRetryT){
+      hotRetryT = setTimeout(function(){
+        hotRetryT = 0; hotFailAt = 0;
+        try{ maybeHot(); }catch(e2){}
+      }, 15000);
+    }
+    throw e;
+  }
+}
 function mergeHot(list){
   let n = 0;
   list.forEach(function(p){
@@ -1829,11 +1854,8 @@ async function loadMarket(){
     cache.q._t = cache.t;
     renderMarket(cache.q, "缓存 · " + fmtTime(cache.t));
   }
-  /* 先把今日异动并进池子，再一起取行情 */
-  try{
-    const hot = await fetchHotList();
-    if(hot.length) mergeHot(hot);
-  }catch(e){}
+  /* 先把今日异动并进池子，再一起取行情（榜单 5 分钟一次，别跟着 60 秒刷新打） */
+  try{ await maybeHot(); }catch(e){}
   try{
     const codes = POOL.map(p=>p.tx).join(",");
     const text = await fetchGBK(TX_Q + codes);
